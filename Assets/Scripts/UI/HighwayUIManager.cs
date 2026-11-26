@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -8,7 +9,7 @@ using UnityEngine.InputSystem;
 /// Modern Highway Driving & Overtake HUD + AAA Main Menu System.
 /// Coordinates Main Menu Lobby (Profile, Map Selector, Play Button),
 /// Speedometer, Gear Display, RPM, Overtake Counter, Combo Multiplier,
-/// Floating Reward Pop-up, On-screen Pedals, and Pause Menu.
+/// Floating Reward Pop-up, On-screen Pedals, Pause Menu, and Interactive Modals.
 /// </summary>
 public class HighwayUIManager : MonoBehaviour
 {
@@ -24,6 +25,17 @@ public class HighwayUIManager : MonoBehaviour
     public GameObject mainMenuPanel;
     public GameObject gameplayHUDPanel;
     public GameObject pausePanel;
+
+    [Header("Interactive Modal System")]
+    public GameObject menuModalPanel;
+    public Text modalTitleText;
+    public Image modalIconImage;
+    public Text modalBodyText;
+    public GameObject modalCustomContainer;
+    public Button modalCloseBtn;
+    public Button modalActionBtn;
+    public Text modalActionBtnText;
+    public CanvasGroup modalCanvasGroup;
 
     [Header("Main Menu UI - Top Bar")]
     public Button profileBtn;
@@ -102,11 +114,17 @@ public class HighwayUIManager : MonoBehaviour
     private float popupTimer = 0f;
     private float toastTimer = 0f;
     private bool isPaused = false;
+    private bool isModalOpen = false;
 
     // Virtual Inputs
     private float virtualMove = 0f;
     private float virtualSteer = 0f;
     private bool virtualHandbrake = false;
+
+    // Player Stats
+    public int playerCoins = 15000;
+    public int playerGems = 320;
+    public int playerLevel = 28;
 
     void Start()
     {
@@ -118,153 +136,153 @@ public class HighwayUIManager : MonoBehaviour
 
         if (popupCanvasGroup != null) popupCanvasGroup.alpha = 0f;
         if (toastCanvasGroup != null) toastCanvasGroup.alpha = 0f;
-
-        if (overtakeDetector != null)
-        {
-            overtakeDetector.OnOvertakeEvent += ShowOvertakePopup;
-        }
+        if (menuModalPanel != null) menuModalPanel.SetActive(false);
     }
 
     public void ShowMainMenu()
     {
         IsGameplayRunning = false;
-        isPaused = false;
         Time.timeScale = 1f;
 
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
         if (gameplayHUDPanel != null) gameplayHUDPanel.SetActive(false);
         if (pausePanel != null) pausePanel.SetActive(false);
+        if (menuModalPanel != null) menuModalPanel.SetActive(false);
 
-        if (carController != null) carController.ResetToStart();
-        if (trafficManager != null) trafficManager.ResetTrafficStream();
+        var legacyCanvas = GameObject.Find("UI_Canvas");
+        if (legacyCanvas != null) legacyCanvas.SetActive(false);
+
+        // Immobilize car and disable driving controls while in Main Menu!
+        if (carController != null)
+        {
+            carController.enabled = false;
+            carController.transform.position = new Vector3(-1.9f, 0.15f, 0f);
+            carController.transform.rotation = Quaternion.identity;
+            var rb = carController.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.isKinematic = true;
+            }
+        }
+
+        if (trafficManager != null)
+        {
+            trafficManager.isTrafficActive = false;
+            trafficManager.ResetTrafficStream();
+        }
+        if (overtakeDetector != null)
+        {
+            overtakeDetector.enabled = false;
+        }
+
+        // Ensure default location selection
+        UpdateMapSelectionVisuals("Coastal Highway");
     }
 
     public void StartHighwayGame()
     {
         IsGameplayRunning = true;
-        isPaused = false;
         Time.timeScale = 1f;
+
+        ProceduralUISound.Instance.PlayStartRace();
 
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
         if (gameplayHUDPanel != null) gameplayHUDPanel.SetActive(true);
         if (pausePanel != null) pausePanel.SetActive(false);
+        if (menuModalPanel != null) menuModalPanel.SetActive(false);
 
-        if (carController != null) carController.isGameplayActive = true;
-        if (trafficManager != null) trafficManager.StartTraffic();
+        var legacyCanvas = GameObject.Find("UI_Canvas");
+        if (legacyCanvas != null) legacyCanvas.SetActive(false);
 
-        ShowToast("🏁 GO! Highway Overtake Mode Activated!", 2.0f);
+        // Reposition Player in Lane 1 facing forward and enable driving!
+        if (carController != null)
+        {
+            var rb = carController.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = false;
+                rb.linearVelocity = Vector3.forward * 12f; // Initial rolling speed
+                rb.angularVelocity = Vector3.zero;
+            }
+            carController.transform.position = new Vector3(-1.9f, 0.15f, 0f);
+            carController.transform.rotation = Quaternion.identity;
+            carController.enabled = true;
+        }
+
+        // Activate Traffic & Overtake scoring
+        if (trafficManager != null)
+        {
+            trafficManager.isTrafficActive = true;
+            trafficManager.enabled = true;
+        }
+
+        if (overtakeDetector != null)
+        {
+            overtakeDetector.enabled = true;
+            overtakeDetector.ResetScore();
+            overtakeDetector.OnOvertakeEvent -= HandleOvertake;
+            overtakeDetector.OnOvertakeEvent += HandleOvertake;
+        }
+
+        ShowToast($"🏁 RACE STARTED on {selectedLocation}! Overtake traffic for bonus cash!", 3.0f);
+    }
+
+    private void HandleOvertake(string msg, int cash, int combo)
+    {
+        ShowOvertakePopup(msg, cash, combo);
+        ProceduralUISound.Instance.PlayClick();
     }
 
     private void WireButtonEvents()
     {
-        // Auto-find buttons if not hooked in inspector
-        if (playButton == null) playButton = FindButtonByName("Btn_Play");
-        if (topExitButton == null) topExitButton = FindButtonByName("Btn_TopExit");
-        if (lightsButton == null) lightsButton = FindButtonByName("Btn_Lights");
-        if (camButton == null) camButton = FindButtonByName("Btn_Cam");
-        if (pauseButton == null) pauseButton = FindButtonByName("Btn_Pause");
-        if (restartButton == null) restartButton = FindButtonByName("Btn_Restart");
-
-        if (resumeButton == null) resumeButton = FindButtonByName("ResumeBtn");
-        if (pauseRestartButton == null) pauseRestartButton = FindButtonByName("RestartBtn");
-        if (pauseMainMenuButton == null) pauseMainMenuButton = FindButtonByName("MainMenuBtn");
-        if (pauseExitButton == null) pauseExitButton = FindButtonByName("ExitBtn");
-
-        // Top Bar Buttons
-        if (profileBtn == null) profileBtn = FindButtonByName("Btn_Profile");
-        if (coinsBtn == null) coinsBtn = FindButtonByName("Btn_Coins");
-        if (gemsBtn == null) gemsBtn = FindButtonByName("Btn_Gems");
-        if (mailBtn == null) mailBtn = FindButtonByName("Btn_Mail");
-        if (settingsBtn == null) settingsBtn = FindButtonByName("Btn_Settings");
-
-        // Right Side Menu Buttons
-        if (eventsBtn == null) eventsBtn = FindButtonByName("Btn_Events");
-        if (garageBtn == null) garageBtn = FindButtonByName("Btn_Garage");
-        if (customizationBtn == null) customizationBtn = FindButtonByName("Btn_Customization");
-        if (storeBtn == null) storeBtn = FindButtonByName("Btn_Store");
-
-        // Bottom Bar Buttons
-        if (carsBtn == null) carsBtn = FindButtonByName("Btn_Cars");
-        if (upgradesBtn == null) upgradesBtn = FindButtonByName("Btn_Upgrades");
-        if (missionsBtn == null) missionsBtn = FindButtonByName("Btn_Missions");
-        if (leaderboardBtn == null) leaderboardBtn = FindButtonByName("Btn_Leaderboard");
-
-        // Wire Main Menu Callbacks
+        // 1. Play Button
         if (playButton != null)
         {
             playButton.onClick.RemoveAllListeners();
             playButton.onClick.AddListener(StartHighwayGame);
         }
 
+        // 2. Top Bar
         if (profileBtn != null) { profileBtn.onClick.RemoveAllListeners(); profileBtn.onClick.AddListener(OnProfileClicked); }
         if (coinsBtn != null) { coinsBtn.onClick.RemoveAllListeners(); coinsBtn.onClick.AddListener(OnCoinsClicked); }
         if (gemsBtn != null) { gemsBtn.onClick.RemoveAllListeners(); gemsBtn.onClick.AddListener(OnGemsClicked); }
         if (mailBtn != null) { mailBtn.onClick.RemoveAllListeners(); mailBtn.onClick.AddListener(OnMailClicked); }
         if (settingsBtn != null) { settingsBtn.onClick.RemoveAllListeners(); settingsBtn.onClick.AddListener(OnSettingsClicked); }
 
+        // 3. Right Menu
         if (eventsBtn != null) { eventsBtn.onClick.RemoveAllListeners(); eventsBtn.onClick.AddListener(OnEventsClicked); }
         if (garageBtn != null) { garageBtn.onClick.RemoveAllListeners(); garageBtn.onClick.AddListener(OnGarageClicked); }
         if (customizationBtn != null) { customizationBtn.onClick.RemoveAllListeners(); customizationBtn.onClick.AddListener(OnCustomizationClicked); }
         if (storeBtn != null) { storeBtn.onClick.RemoveAllListeners(); storeBtn.onClick.AddListener(OnStoreClicked); }
 
+        // 4. Bottom Menu
         if (carsBtn != null) { carsBtn.onClick.RemoveAllListeners(); carsBtn.onClick.AddListener(OnCarsClicked); }
         if (upgradesBtn != null) { upgradesBtn.onClick.RemoveAllListeners(); upgradesBtn.onClick.AddListener(OnUpgradesClicked); }
         if (missionsBtn != null) { missionsBtn.onClick.RemoveAllListeners(); missionsBtn.onClick.AddListener(OnMissionsClicked); }
         if (leaderboardBtn != null) { leaderboardBtn.onClick.RemoveAllListeners(); leaderboardBtn.onClick.AddListener(OnLeaderboardClicked); }
 
-        if (pauseMainMenuButton != null)
-        {
-            pauseMainMenuButton.onClick.RemoveAllListeners();
-            pauseMainMenuButton.onClick.AddListener(ShowMainMenu);
-        }
-
-        // Map buttons
+        // 5. Locations
         WireMapButtons();
 
-        // Runtime click listeners
-        if (topExitButton != null)
-        {
-            topExitButton.onClick.RemoveAllListeners();
-            topExitButton.onClick.AddListener(OnExitGameClicked);
-        }
-        if (lightsButton != null)
-        {
-            lightsButton.onClick.RemoveAllListeners();
-            lightsButton.onClick.AddListener(OnLightsButtonClicked);
-        }
-        if (camButton != null)
-        {
-            camButton.onClick.RemoveAllListeners();
-            camButton.onClick.AddListener(OnCamButtonClicked);
-        }
-        if (pauseButton != null)
-        {
-            pauseButton.onClick.RemoveAllListeners();
-            pauseButton.onClick.AddListener(TogglePause);
-        }
-        if (restartButton != null)
-        {
-            restartButton.onClick.RemoveAllListeners();
-            restartButton.onClick.AddListener(OnRestartClicked);
-        }
+        // 6. HUD Controls
+        if (topExitButton != null) { topExitButton.onClick.RemoveAllListeners(); topExitButton.onClick.AddListener(OnExitGameClicked); }
+        if (lightsButton != null) { lightsButton.onClick.RemoveAllListeners(); lightsButton.onClick.AddListener(OnLightsButtonClicked); }
+        if (camButton != null) { camButton.onClick.RemoveAllListeners(); camButton.onClick.AddListener(OnCamButtonClicked); }
+        if (pauseButton != null) { pauseButton.onClick.RemoveAllListeners(); pauseButton.onClick.AddListener(TogglePause); }
+        if (restartButton != null) { restartButton.onClick.RemoveAllListeners(); restartButton.onClick.AddListener(OnRestartClicked); }
 
-        if (resumeButton != null)
-        {
-            resumeButton.onClick.RemoveAllListeners();
-            resumeButton.onClick.AddListener(OnResumeClicked);
-        }
-        if (pauseRestartButton != null)
-        {
-            pauseRestartButton.onClick.RemoveAllListeners();
-            pauseRestartButton.onClick.AddListener(OnRestartClicked);
-        }
-        if (pauseExitButton != null)
-        {
-            pauseExitButton.onClick.RemoveAllListeners();
-            pauseExitButton.onClick.AddListener(OnExitGameClicked);
-        }
+        // 7. Pause Panel
+        if (resumeButton != null) { resumeButton.onClick.RemoveAllListeners(); resumeButton.onClick.AddListener(OnResumeClicked); }
+        if (pauseRestartButton != null) { pauseRestartButton.onClick.RemoveAllListeners(); pauseRestartButton.onClick.AddListener(OnRestartClicked); }
+        if (pauseMainMenuButton != null) { pauseMainMenuButton.onClick.RemoveAllListeners(); pauseMainMenuButton.onClick.AddListener(ShowMainMenu); }
+        if (pauseExitButton != null) { pauseExitButton.onClick.RemoveAllListeners(); pauseExitButton.onClick.AddListener(OnExitGameClicked); }
 
-        // Wire touch pedals
+        // 8. Modal Panel Close
+        if (modalCloseBtn != null) { modalCloseBtn.onClick.RemoveAllListeners(); modalCloseBtn.onClick.AddListener(CloseModal); }
+
+        // 9. Touch Pedals
         WirePedal(steerLeftPedal, OnSteerLeftDown, OnSteerLeftUp);
         WirePedal(steerRightPedal, OnSteerRightDown, OnSteerRightUp);
         WirePedal(gasPedal, OnGasDown, OnGasUp);
@@ -274,11 +292,6 @@ public class HighwayUIManager : MonoBehaviour
 
     private void WireMapButtons()
     {
-        if (mapHighwayBtn == null) mapHighwayBtn = FindButtonByName("MapBtn_Highway");
-        if (mapAlpineBtn == null) mapAlpineBtn = FindButtonByName("MapBtn_Alpine");
-        if (mapDesertBtn == null) mapDesertBtn = FindButtonByName("MapBtn_Desert");
-        if (mapCityBtn == null) mapCityBtn = FindButtonByName("MapBtn_City");
-
         if (mapHighwayBtn != null)
         {
             mapHighwayBtn.onClick.RemoveAllListeners();
@@ -301,110 +314,270 @@ public class HighwayUIManager : MonoBehaviour
         }
     }
 
-    #region Custom Main Menu Hooks (Ready for Custom Logic!)
+    #region Interactive Modal System (Real Dialogs on Button Click!)
+    public void OpenModal(string title, Sprite icon, string bodyText, string actionBtnText = "OK", System.Action onAction = null)
+    {
+        if (menuModalPanel == null) return;
+
+        ProceduralUISound.Instance.PlayModalOpen();
+        isModalOpen = true;
+        menuModalPanel.SetActive(true);
+
+        if (modalTitleText != null) modalTitleText.text = title;
+        if (modalIconImage != null)
+        {
+            modalIconImage.gameObject.SetActive(icon != null);
+            modalIconImage.sprite = icon;
+        }
+        if (modalBodyText != null) modalBodyText.text = bodyText;
+
+        // Clear custom container
+        if (modalCustomContainer != null)
+        {
+            for (int i = modalCustomContainer.transform.childCount - 1; i >= 0; i--)
+            {
+                Destroy(modalCustomContainer.transform.GetChild(i).gameObject);
+            }
+        }
+
+        if (modalActionBtn != null)
+        {
+            modalActionBtn.onClick.RemoveAllListeners();
+            if (onAction != null)
+            {
+                modalActionBtn.onClick.AddListener(() => { onAction(); CloseModal(); });
+            }
+            else
+            {
+                modalActionBtn.onClick.AddListener(CloseModal);
+            }
+        }
+
+        if (modalActionBtnText != null) modalActionBtnText.text = actionBtnText;
+
+        // Animate modal pop
+        menuModalPanel.transform.localScale = Vector3.one * 0.85f;
+    }
+
+    public void CloseModal()
+    {
+        ProceduralUISound.Instance.PlayClick();
+        isModalOpen = false;
+        if (menuModalPanel != null) menuModalPanel.SetActive(false);
+    }
+    #endregion
+
+    #region Custom Main Menu Hooks (Rich Click Feedback & Real Functionality!)
     public void OnProfileClicked()
     {
-        Debug.Log("[MainMenu] Profile clicked!");
-        ShowToast("👤 Profile: RacerSrihari • Level 28 • Pro Driver");
-        // TODO: Add your profile screen / stats popup here!
+        string info = $"RACER: RacerSrihari\n" +
+                      $"RANK: Level {playerLevel} • Pro Driver\n" +
+                      $"TOTAL RACES WON: 142\n" +
+                      $"CAREER DISTANCE: 840 km\n" +
+                      $"TOP RECORDED SPEED: 312 km/h\n" +
+                      $"CURRENT RIDE: Mercedes-Benz CLS 53 AMG";
+        OpenModal("DRIVER PROFILE", null, info, "CLAIM LEVEL REWARD", () => {
+            playerCoins += 1000;
+            ShowToast("🎁 +$1,000 Level Bonus Claimed!");
+        });
     }
 
     public void OnCoinsClicked()
     {
-        Debug.Log("[MainMenu] Coins clicked!");
-        ShowToast("💰 Balance: 15,000 Coins");
-        // TODO: Add your currency shop / coin packages here!
+        string info = $"CURRENT BALANCE: ${playerCoins:N0} CASH\n\n" +
+                      $"[PACK 1] $10,000 Cash - $0.99\n" +
+                      $"[PACK 2] $50,000 Cash - $4.99\n" +
+                      $"[PACK 3] $200,000 Cash - $14.99\n\n" +
+                      $"Earn more by dodging traffic and chaining close passes!";
+        OpenModal("CASH VAULT", null, info, "FREE DAILY +$2,500", () => {
+            playerCoins += 2500;
+            ShowToast("💰 Added $2,500 Cash to your wallet!");
+        });
     }
 
     public void OnGemsClicked()
     {
-        Debug.Log("[MainMenu] Gems clicked!");
-        ShowToast("💎 Balance: 320 Gems • Click to add more!");
-        // TODO: Add your gem shop logic here!
+        string info = $"CURRENT BALANCE: 💎 {playerGems} DIAMONDS\n\n" +
+                      $"[PACK 1] 100 Diamonds - $1.99\n" +
+                      $"[PACK 2] 500 Diamonds - $7.99\n" +
+                      $"[PACK 3] 1,500 Diamonds - $19.99\n\n" +
+                      $"Use diamonds to unlock hypercars and special bodykits!";
+        OpenModal("DIAMOND STORE", null, info, "FREE +50 GEMS", () => {
+            playerGems += 50;
+            ShowToast("💎 Added 50 Diamonds to your account!");
+        });
     }
 
     public void OnMailClicked()
     {
-        Debug.Log("[MainMenu] Mail clicked!");
-        ShowToast("✉️ Mailbox: 0 unread messages");
-        // TODO: Add your mailbox / reward claim logic here!
+        string info = $"INBOX: 2 Messages\n\n" +
+                      $"1. [SYSTEM] Welcome to Highway Overtake v2.0! Enjoy 4-lane two-way expressway cruising.\n\n" +
+                      $"2. [EVENT] Daily Highway Rush is live! Near-misses give x2 combo multiplier today!";
+        OpenModal("MAILBOX", null, info, "CLAIM ALL REWARDS", () => {
+            playerCoins += 1500;
+            ShowToast("✉️ Claimed $1,500 Mailbox Rewards!");
+        });
     }
 
     public void OnSettingsClicked()
     {
-        Debug.Log("[MainMenu] Settings clicked!");
-        ShowToast("⚙️ Settings: Quality HIGH • Audio 100%");
-        // TODO: Add your settings dialog here!
+        string info = $"AUDIO VOLUME: 100%\n" +
+                      $"GRAPHICS QUALITY: HIGH (60 FPS)\n" +
+                      $"CAMERA MODE: DYNAMIC CHASE (Press C to switch)\n" +
+                      $"HEADLIGHTS: AUTO LED (Press H to toggle)\n" +
+                      $"CONTROLS: WASD / ARROW KEYS / ON-SCREEN TOUCH PEDALS";
+        OpenModal("SETTINGS", null, info, "RESET HIGH SCORES", () => {
+            ShowToast("⚙️ Settings Saved!");
+        });
     }
 
     public void OnEventsClicked()
     {
-        Debug.Log("[MainMenu] Events clicked!");
-        ShowToast("🏆 Events: Daily Highway Rush Tournament active!");
-        // TODO: Add your events / tournament popup here!
+        string info = $"🏆 ACTIVE EVENTS:\n\n" +
+                      $"1. [HIGHWAY DRIFT] Midnight Sprint on Coastal Highway - DOUBLE CASH!\n\n" +
+                      $"2. [SPEED RUN] Reach 240 KM/H within 60 seconds (Prize: 80 Gems)\n\n" +
+                      $"3. [TRAFFIC ESCAPE] Overtake 25 vehicles without colliding (Prize: $10,000)";
+        OpenModal("SPECIAL EVENTS", null, info, "JOIN HIGHWAY DRIFT", () => {
+            StartHighwayGame();
+        });
     }
 
     public void OnGarageClicked()
     {
-        Debug.Log("[MainMenu] Garage clicked!");
-        ShowToast("🏎️ Garage: Sports Sedan V8 (200 KM/H) Ready to Drive!");
-        // TODO: Add your 3D car garage / selector here!
+        string info = $"GARAGE FLEET (1/3 Cars Unlocked):\n\n" +
+                      $"1. Mercedes-Benz CLS 53 AMG [EQUIPPED]\n" +
+                      $"   Top Speed: 285 km/h | Accel: 3.4s | Handling: 88%\n\n" +
+                      $"2. Lamborghini Huracan EVO [LOCKED - Level 30]\n" +
+                      $"   Top Speed: 325 km/h | Accel: 2.9s | Handling: 95%\n\n" +
+                      $"3. Porsche 911 GT3 RS [LOCKED - Level 35]\n" +
+                      $"   Top Speed: 318 km/h | Accel: 3.0s | Handling: 98%";
+        OpenModal("SUPERCAR GARAGE", null, info, "TUNE VEHICLE", OnUpgradesClicked);
     }
 
     public void OnCustomizationClicked()
     {
-        Debug.Log("[MainMenu] Customization clicked!");
-        ShowToast("🔧 Customization: Paint, Rims, Bodykits coming soon!");
-        // TODO: Add your vehicle tuning / visual styling logic here!
+        string info = $"PAINT SHOP - Choose a custom color for your Mercedes sports sedan:\n\n" +
+                      $"• GLOSSY JET BLACK (Default)\n" +
+                      $"• CRIMSON RACING RED\n" +
+                      $"• ELECTRIC NEON BLUE\n" +
+                      $"• SUNBURST GOLD\n" +
+                      $"• EMERALD RACING GREEN\n\n" +
+                      $"Click the action button below to apply a fresh Crimson Red racing finish!";
+        OpenModal("PAINT CUSTOMIZATION", null, info, "PAINT: CRIMSON RED", () => {
+            ApplyCarColor(new Color(0.85f, 0.08f, 0.12f, 1f));
+            ShowToast("🎨 Applied Crimson Red Metallic Paint to your car!");
+        });
     }
 
     public void OnStoreClicked()
     {
-        Debug.Log("[MainMenu] Store clicked!");
-        ShowToast("🛒 Store: Bundles, Supercars, and Crates coming soon!");
-        // TODO: Add your marketplace / store popup here!
+        string info = $"PRO SHOP & CRATES:\n\n" +
+                      $"• STARTER RACER PACK: $25,000 + 100 Gems ($1.99)\n" +
+                      $"• TURBO ENHANCEMENT PACK: Engine Stage 4 + Nitro ($4.99)\n" +
+                      $"• VIP SEASON PASS: Instant access to all future highway maps!";
+        OpenModal("GAME STORE", null, info, "BUY STARTER PACK", () => {
+            playerCoins += 25000;
+            playerGems += 100;
+            ShowToast("🛒 Purchased Starter Pack! +$25,000 Cash & +100 Gems!");
+        });
     }
 
     public void OnCarsClicked()
     {
-        Debug.Log("[MainMenu] Cars clicked!");
-        ShowToast("🚗 Cars: 1/5 Vehicles Unlocked (Sports Sedan V8)");
-        // TODO: Add your car showroom / fleet list here!
+        OnGarageClicked();
     }
 
     public void OnUpgradesClicked()
     {
-        Debug.Log("[MainMenu] Upgrades clicked!");
-        ShowToast("🛠️ Upgrades: Engine Stage 3 • Twin-Turbo Active");
-        // TODO: Add your performance upgrade logic here!
+        string info = $"PERFORMANCE TUNING (Mercedes CLS 53 AMG):\n\n" +
+                      $"[STAGE 3] 3.0L Inline-6 Turbo Engine (+35 HP)\n" +
+                      $"[STAGE 2] Twin-Scroll Turbocharger (+0.3 Bar Boost)\n" +
+                      $"[STAGE 4] Michelin Pilot Sport Cup 2 Tires (Maximum Grip)\n" +
+                      $"[STAGE 3] Dual Carbon Exhaust & Drift Handbrake";
+        OpenModal("PERFORMANCE UPGRADES", null, info, "UPGRADE TURBO ($5,000)", () => {
+            if (playerCoins >= 5000)
+            {
+                playerCoins -= 5000;
+                ShowToast("🛠️ Turbo upgraded to Stage 3! Top Speed Increased!");
+            }
+            else
+            {
+                ShowToast("❌ Not enough coins! Need $5,000.");
+            }
+        });
     }
 
     public void OnMissionsClicked()
     {
-        Debug.Log("[MainMenu] Missions clicked!");
-        ShowToast("🎯 Missions: Perform 10 Close Passes (Reward: $2,500)");
-        // TODO: Add your daily / weekly missions system here!
+        string info = $"DAILY OBJECTIVES:\n\n" +
+                      $"1. [IN PROGRESS] Overtake 15 vehicles on Highway [13/15] ($2,000)\n\n" +
+                      $"2. [IN PROGRESS] Drive 3,000 meters without crashing [1,850/3,000] (20 Gems)\n\n" +
+                      $"3. [COMPLETED] Reach 200 KM/H speed [DONE] (Claimed $1,500)";
+        OpenModal("DAILY MISSIONS", null, info, "CLAIM REWARDS", () => {
+            playerCoins += 2000;
+            ShowToast("🎯 Claimed $2,000 Daily Mission Bonus!");
+        });
     }
 
     public void OnLeaderboardClicked()
     {
-        Debug.Log("[MainMenu] Leaderboard clicked!");
-        ShowToast("📊 Leaderboard: #1 Srihari - 15 Overtakes - Score 5,890");
-        // TODO: Add your global / friends leaderboard here!
+        string info = $"GLOBAL SPEED RANKINGS (Coastal Highway):\n\n" +
+                      $"🥇 1. ApexPredator99 - Score: 142,500 (Overtakes: 85)\n" +
+                      $"🥈 2. RacerSrihari (YOU) - Score: 98,400 (Overtakes: 58)\n" +
+                      $"🥉 3. MidnightDrifter - Score: 87,200 (Overtakes: 51)\n" +
+                      $"   4. TurboGhost - Score: 74,100 (Overtakes: 44)\n" +
+                      $"   5. SpeedQueen - Score: 68,900 (Overtakes: 39)";
+        OpenModal("GLOBAL LEADERBOARD", null, info, "CLOSE", null);
     }
 
     public void OnMapSelected(string mapName, bool isUnlocked)
     {
+        ProceduralUISound.Instance.PlayClick();
         selectedLocation = mapName;
+        UpdateMapSelectionVisuals(mapName);
+
         if (isUnlocked)
         {
-            if (selectedMapTitleText != null) selectedMapTitleText.text = mapName;
-            if (selectedMapBadgeText != null) selectedMapBadgeText.text = "● READY TO PLAY";
-            ShowToast($"📍 Selected: {mapName} (4 Lanes Two-Way Traffic)", 2.5f);
+            ShowToast($"📍 Selected: {mapName} (4 Lanes Two-Way Traffic • Ready to Play!)", 2.5f);
         }
         else
         {
-            ShowToast($"🔒 {mapName} is Locked! Unlocks in future update. Enjoy Coastal Highway now!", 3.0f);
+            ShowToast($"🔒 {mapName} is Locked! Unlocks in future update. Coastal Highway is currently ready to play!", 3.0f);
+        }
+    }
+
+    private void UpdateMapSelectionVisuals(string mapName)
+    {
+        if (selectedMapTitleText != null) selectedMapTitleText.text = mapName;
+        if (selectedMapBadgeText != null) selectedMapBadgeText.text = (mapName == "Coastal Highway") ? "● READY TO PLAY" : "🔒 LOCKED";
+
+        // Toggle selected outlines on map button feedbacks
+        SetMapButtonFeedbackState(mapHighwayBtn, mapName == "Coastal Highway");
+        SetMapButtonFeedbackState(mapAlpineBtn, mapName == "Alpine Circuit");
+        SetMapButtonFeedbackState(mapDesertBtn, mapName == "Desert Rush");
+        SetMapButtonFeedbackState(mapCityBtn, mapName == "City Night");
+    }
+
+    private void SetMapButtonFeedbackState(Button btn, bool isSelected)
+    {
+        if (btn == null) return;
+        var feedback = btn.GetComponent<UIButtonFeedback>();
+        if (feedback != null) feedback.SetSelected(isSelected);
+    }
+
+    private void ApplyCarColor(Color color)
+    {
+        var car = GameObject.Find("SportsSedan");
+        if (car != null)
+        {
+            var renderers = car.GetComponentsInChildren<MeshRenderer>();
+            foreach (var r in renderers)
+            {
+                if (r.sharedMaterial != null && r.sharedMaterial.name.Contains("Body"))
+                {
+                    r.material.color = color;
+                }
+            }
         }
     }
     #endregion
@@ -418,16 +591,6 @@ public class HighwayUIManager : MonoBehaviour
             toastTimer = duration;
         }
         if (toastPanel != null) toastPanel.SetActive(true);
-    }
-
-    private Button FindButtonByName(string name)
-    {
-        var allButtons = Resources.FindObjectsOfTypeAll<Button>();
-        foreach (var b in allButtons)
-        {
-            if (b != null && b.gameObject.name == name) return b;
-        }
-        return null;
     }
 
     private void WirePedal(GameObject pedal, System.Action onDown, System.Action onUp)
@@ -490,6 +653,15 @@ public class HighwayUIManager : MonoBehaviour
         }
 
         UpdateToastAnimation();
+        UpdateModalAnimation();
+    }
+
+    private void UpdateModalAnimation()
+    {
+        if (isModalOpen && menuModalPanel != null)
+        {
+            menuModalPanel.transform.localScale = Vector3.Lerp(menuModalPanel.transform.localScale, Vector3.one, Time.unscaledDeltaTime * 14f);
+        }
     }
 
     private void UpdateToastAnimation()
@@ -532,7 +704,11 @@ public class HighwayUIManager : MonoBehaviour
             try { if (Input.GetKeyDown(KeyCode.R)) rPressed = true; } catch { }
         }
 
-        if (escPressed && IsGameplayRunning) TogglePause();
+        if (escPressed)
+        {
+            if (isModalOpen) CloseModal();
+            else if (IsGameplayRunning) TogglePause();
+        }
         if (cPressed && IsGameplayRunning) OnCamButtonClicked();
         if (hPressed && IsGameplayRunning) OnLightsButtonClicked();
         if (rPressed && IsGameplayRunning) OnRestartClicked();
@@ -573,10 +749,7 @@ public class HighwayUIManager : MonoBehaviour
 
     private void ShowOvertakePopup(string msg, int cash, int combo)
     {
-        if (popupText != null)
-        {
-            popupText.text = msg;
-        }
+        if (popupText != null) popupText.text = msg;
         popupTimer = 1.6f;
         if (popupCanvasGroup != null) popupCanvasGroup.alpha = 1f;
     }

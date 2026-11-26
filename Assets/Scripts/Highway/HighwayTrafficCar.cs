@@ -23,6 +23,8 @@ public class HighwayTrafficCar : MonoBehaviour
     public float safeFollowDistance = 14f;
 
     [Header("Visuals")]
+    [HideInInspector]
+    public HighwayTrafficManager trafficManager;
     public Transform frontLeftWheel;
     public Transform frontRightWheel;
     public Transform rearLeftWheel;
@@ -72,6 +74,16 @@ public class HighwayTrafficCar : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (trafficManager != null && !trafficManager.isTrafficActive)
+        {
+            #if UNITY_6000_0_OR_NEWER
+            rb.linearVelocity = Vector3.zero;
+            #else
+            rb.velocity = Vector3.zero;
+            #endif
+            return;
+        }
+
         Vector3 heading = isOncoming ? Vector3.back : Vector3.forward;
 
         // 1. Forward Radar: Detect vehicle ahead in same lane & heading

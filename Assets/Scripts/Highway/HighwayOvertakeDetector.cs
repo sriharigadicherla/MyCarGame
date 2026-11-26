@@ -36,6 +36,17 @@ public class HighwayOvertakeDetector : MonoBehaviour
     // Delegates for UI events
     public System.Action<string, int, int> OnOvertakeEvent; // Message, cashEarned, combo
 
+    public void ResetScore()
+    {
+        TotalOvertakes = 0;
+        TotalClosePasses = 0;
+        CurrentCombo = 0;
+        ComboTimer = 0f;
+        CurrentScore = 0;
+        CurrentCash = 1500;
+        lastVehicleZDiff.Clear();
+    }
+
     // Tracking state for each traffic vehicle: was it behind or ahead?
     private Dictionary<int, float> lastVehicleZDiff = new Dictionary<int, float>();
     private float highSpeedBonusTimer = 0f;
@@ -64,6 +75,7 @@ public class HighwayOvertakeDetector : MonoBehaviour
 
     void Update()
     {
+        if (trafficManager != null && !trafficManager.isTrafficActive) return;
         if (playerCar == null || trafficManager == null)
         {
             FindReferencesIfNull();

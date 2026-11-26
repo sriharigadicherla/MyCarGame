@@ -49,6 +49,7 @@ public class HighwayTrafficManager : MonoBehaviour
         FindPlayerIfNull();
         ClearOldCars();
         SpawnInitialTrafficStream();
+        isTrafficActive = false; // Stay frozen until user clicks PLAY
     }
 
     private void ClearOldCars()
@@ -133,6 +134,7 @@ public class HighwayTrafficManager : MonoBehaviour
 
         // Traffic Car Script
         HighwayTrafficCar tc = carObj.AddComponent<HighwayTrafficCar>();
+        tc.trafficManager = this;
         tc.frontLeftWheel = fl;
         tc.frontRightWheel = fr;
         tc.rearLeftWheel = rl;

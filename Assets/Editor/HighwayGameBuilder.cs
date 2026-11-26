@@ -15,6 +15,7 @@ using UnityEngine.InputSystem.UI;
 /// 4. Overtake & Near-Miss combo scoring detector with floating HUD rewards.
 /// 5. Digital speedometer, gear indicator, touch pedals, pause menu, and procedural audio.
 /// 6. Configures player Mercedes sports sedan with smooth wheel physics and chase camera.
+/// 7. AAA Main Menu Lobby with procedural glassmorphic cards, pills, interactive buttons, modal dialogs, and tactile click feedback.
 /// </summary>
 public class HighwayGameBuilder
 {
@@ -98,160 +99,156 @@ public class HighwayGameBuilder
 
     private static void EnsureDirectory(string path)
     {
-        if (!AssetDatabase.IsValidFolder(path))
+        if (!Directory.Exists(path))
         {
-            string parent = Path.GetDirectoryName(path).Replace("\\", "/");
-            string folder = Path.GetFileName(path);
-            AssetDatabase.CreateFolder(parent, folder);
-        }
-    }
-
-    private static void CleanUpOldObjects()
-    {
-        string[] names = new string[] {
-            "Environment", "TrafficSystem", "GameplayManager", "UI_Canvas", "AudioManager",
-            "HighwayManager", "HighwayTrafficManager", "HighwayOvertakeDetector", "Plane", "EventSystem"
-        };
-        foreach (var n in names)
-        {
-            var obj = GameObject.Find(n);
-            if (obj != null) Object.DestroyImmediate(obj);
+            Directory.CreateDirectory(path);
+            AssetDatabase.Refresh();
         }
     }
 
     private static Dictionary<string, Material> CreateOrUpdateMaterials()
     {
-        var dict = new Dictionary<string, Material>();
+        var mats = new Dictionary<string, Material>();
         Shader litShader = Shader.Find("Universal Render Pipeline/Lit");
         if (litShader == null) litShader = Shader.Find("Standard");
 
-        dict["Mat_Road_Asphalt"] = GetOrCreateMat("Mat_Road_Asphalt", litShader,
-            new Color(0.12f, 0.13f, 0.15f, 1f), 0.15f, 0.35f);
+        mats["Mat_Road_Asphalt"] = GetOrCreateMaterial("Mat_Road_Asphalt", litShader, new Color(0.18f, 0.20f, 0.22f), 0.05f, 0.25f);
+        mats["Mat_Road_Marking_Yellow"] = GetOrCreateMaterial("Mat_Road_Marking_Yellow", litShader, new Color(1.0f, 0.85f, 0.05f), 0.1f, 0.15f);
+        mats["Mat_Road_Marking_White"] = GetOrCreateMaterial("Mat_Road_Marking_White", litShader, new Color(0.96f, 0.96f, 0.98f), 0.1f, 0.2f);
+        mats["Mat_Barrier_Metal"] = GetOrCreateMaterial("Mat_Barrier_Metal", litShader, new Color(0.80f, 0.82f, 0.86f), 0.7f, 0.55f);
+        mats["Mat_StreetLight_Pole"] = GetOrCreateMaterial("Mat_StreetLight_Pole", litShader, new Color(0.25f, 0.27f, 0.30f), 0.6f, 0.45f);
+        mats["Mat_Grass_Park"] = GetOrCreateMaterial("Mat_Grass_Park", litShader, new Color(0.20f, 0.55f, 0.18f), 0.0f, 0.05f);
+        mats["Mat_Tree_Trunk"] = GetOrCreateMaterial("Mat_Tree_Trunk", litShader, new Color(0.38f, 0.24f, 0.14f), 0.0f, 0.05f);
+        mats["Mat_Tree_Leaves_Autumn_Red"] = GetOrCreateMaterial("Mat_Tree_Leaves_Autumn_Red", litShader, new Color(0.85f, 0.20f, 0.12f), 0.0f, 0.05f);
+        mats["Mat_Tree_Leaves_Autumn_Orange"] = GetOrCreateMaterial("Mat_Tree_Leaves_Autumn_Orange", litShader, new Color(0.95f, 0.52f, 0.08f), 0.0f, 0.05f);
+        mats["Mat_Tree_Leaves_Green"] = GetOrCreateMaterial("Mat_Tree_Leaves_Green", litShader, new Color(0.14f, 0.58f, 0.22f), 0.0f, 0.05f);
+        mats["Mat_Highway_Sign"] = GetOrCreateMaterial("Mat_Highway_Sign", litShader, new Color(0.05f, 0.45f, 0.25f), 0.2f, 0.4f);
 
-        dict["Mat_Road_Marking_Yellow"] = GetOrCreateMat("Mat_Road_Marking_Yellow", litShader,
-            new Color(0.98f, 0.82f, 0.08f, 1f), 0.0f, 0.35f, new Color(0.45f, 0.38f, 0.04f, 1f));
+        // Traffic Car Materials
+        mats["Mat_TrafficCar_Body1"] = GetOrCreateMaterial("Mat_TrafficCar_Body1", litShader, new Color(0.85f, 0.12f, 0.12f), 0.85f, 0.85f); // Crimson
+        mats["Mat_TrafficCar_Body2"] = GetOrCreateMaterial("Mat_TrafficCar_Body2", litShader, new Color(0.10f, 0.35f, 0.85f), 0.85f, 0.85f); // Cobalt Blue
+        mats["Mat_TrafficCar_Body3"] = GetOrCreateMaterial("Mat_TrafficCar_Body3", litShader, new Color(0.92f, 0.92f, 0.95f), 0.90f, 0.90f); // Pearl White
+        mats["Mat_TrafficCar_Body4"] = GetOrCreateMaterial("Mat_TrafficCar_Body4", litShader, new Color(0.12f, 0.12f, 0.14f), 0.80f, 0.85f); // Midnight Black
+        mats["Mat_TrafficCar_Body5"] = GetOrCreateMaterial("Mat_TrafficCar_Body5", litShader, new Color(0.95f, 0.75f, 0.05f), 0.85f, 0.80f); // Racing Yellow
 
-        dict["Mat_Road_Marking_White"] = GetOrCreateMat("Mat_Road_Marking_White", litShader,
-            new Color(1f, 1f, 1f, 1f), 0.0f, 0.35f, new Color(0.6f, 0.6f, 0.65f, 1f));
+        mats["Mat_Glass_Tinted"] = GetOrCreateMaterial("Mat_Glass_Tinted", litShader, new Color(0.08f, 0.12f, 0.18f), 0.95f, 0.95f);
+        mats["Mat_Tire_Rubber"] = GetOrCreateMaterial("Mat_Tire_Rubber", litShader, new Color(0.12f, 0.12f, 0.13f), 0.05f, 0.15f);
+        mats["Mat_Dark_Trim"] = GetOrCreateMaterial("Mat_Dark_Trim", litShader, new Color(0.10f, 0.10f, 0.11f), 0.30f, 0.40f);
 
-        dict["Mat_Barrier_Metal"] = GetOrCreateMat("Mat_Barrier_Metal", litShader,
-            new Color(0.78f, 0.80f, 0.82f, 1f), 0.85f, 0.65f);
+        // Emission Materials
+        mats["Mat_StreetLight_Glow"] = GetOrCreateEmissionMaterial("Mat_StreetLight_Glow", litShader, new Color(1f, 0.95f, 0.80f), new Color(1.8f, 1.7f, 1.3f));
+        mats["Mat_TrafficLight_Off"] = GetOrCreateMaterial("Mat_TrafficLight_Off", litShader, new Color(0.35f, 0.05f, 0.05f), 0.1f, 0.3f);
+        mats["Mat_TrafficLight_Red"] = GetOrCreateEmissionMaterial("Mat_TrafficLight_Red", litShader, new Color(1f, 0.05f, 0.05f), new Color(2.5f, 0.1f, 0.1f));
+        mats["Mat_Headlight_LED"] = GetOrCreateEmissionMaterial("Mat_Headlight_LED", litShader, new Color(0.95f, 0.98f, 1.0f), new Color(2.2f, 2.3f, 2.5f));
 
-        dict["Mat_StreetLight_Pole"] = GetOrCreateMat("Mat_StreetLight_Pole", litShader,
-            new Color(0.20f, 0.22f, 0.25f, 1f), 0.70f, 0.50f);
-
-        dict["Mat_StreetLight_Glow"] = GetOrCreateMat("Mat_StreetLight_Glow", litShader,
-            new Color(1f, 0.95f, 0.8f, 1f), 0f, 0.9f, new Color(2.5f, 2.2f, 1.5f, 1f));
-
-        dict["Mat_Grass_Park"] = GetOrCreateMat("Mat_Grass_Park", litShader,
-            new Color(0.18f, 0.44f, 0.15f, 1f), 0f, 0.15f);
-
-        dict["Mat_Tree_Trunk"] = GetOrCreateMat("Mat_Tree_Trunk", litShader,
-            new Color(0.28f, 0.18f, 0.10f, 1f), 0f, 0.10f);
-
-        dict["Mat_Tree_Leaves_Autumn_Red"] = GetOrCreateMat("Mat_Tree_Leaves_Autumn_Red", litShader,
-            new Color(0.85f, 0.18f, 0.10f, 1f), 0.05f, 0.25f);
-
-        dict["Mat_Tree_Leaves_Autumn_Orange"] = GetOrCreateMat("Mat_Tree_Leaves_Autumn_Orange", litShader,
-            new Color(0.94f, 0.48f, 0.08f, 1f), 0.05f, 0.25f);
-
-        dict["Mat_Tree_Leaves_Green"] = GetOrCreateMat("Mat_Tree_Leaves_Green", litShader,
-            new Color(0.16f, 0.52f, 0.14f, 1f), 0.05f, 0.20f);
-
-        dict["Mat_Highway_Sign"] = GetOrCreateMat("Mat_Highway_Sign", litShader,
-            new Color(0.08f, 0.55f, 0.28f, 1f), 0.1f, 0.60f, new Color(0.1f, 0.9f, 0.4f, 1f));
-
-        // 5 Traffic Car Colors
-        dict["Mat_TrafficCar_Body1"] = GetOrCreateMat("Mat_TrafficCar_Body1", litShader,
-            new Color(0.82f, 0.12f, 0.12f, 1f), 0.85f, 0.90f); // Crimson Red
-        dict["Mat_TrafficCar_Body2"] = GetOrCreateMat("Mat_TrafficCar_Body2", litShader,
-            new Color(0.95f, 0.96f, 0.98f, 1f), 0.70f, 0.92f); // Pearl White
-        dict["Mat_TrafficCar_Body3"] = GetOrCreateMat("Mat_TrafficCar_Body3", litShader,
-            new Color(0.12f, 0.32f, 0.78f, 1f), 0.85f, 0.92f); // Electric Blue
-        dict["Mat_TrafficCar_Body4"] = GetOrCreateMat("Mat_TrafficCar_Body4", litShader,
-            new Color(0.50f, 0.52f, 0.55f, 1f), 0.88f, 0.88f); // Metallic Silver
-        dict["Mat_TrafficCar_Body5"] = GetOrCreateMat("Mat_TrafficCar_Body5", litShader,
-            new Color(0.95f, 0.75f, 0.08f, 1f), 0.85f, 0.90f); // Racing Yellow
-
-        dict["Mat_TrafficLight_Off"] = GetOrCreateMat("Mat_TrafficLight_Off", litShader,
-            new Color(0.15f, 0.15f, 0.15f, 1f), 0.2f, 0.5f);
-        dict["Mat_TrafficLight_Red"] = GetOrCreateMat("Mat_TrafficLight_Red", litShader,
-            new Color(0.95f, 0.10f, 0.10f, 1f), 0.1f, 0.9f, new Color(4.5f, 0.2f, 0.2f, 1f));
-
-        dict["Mat_Headlight_LED"] = GetOrCreateMat("Mat_Headlight_LED", litShader,
-            new Color(1f, 1f, 1f, 1f), 0.1f, 0.95f, new Color(3.5f, 3.5f, 3.6f, 1f));
-        dict["Mat_Glass_Tinted"] = GetOrCreateMat("Mat_Glass_Tinted", litShader,
-            new Color(0.10f, 0.12f, 0.16f, 0.95f), 0.8f, 0.95f);
-        dict["Mat_Tire_Rubber"] = GetOrCreateMat("Mat_Tire_Rubber", litShader,
-            new Color(0.12f, 0.12f, 0.12f, 1f), 0.0f, 0.2f);
-        dict["Mat_Dark_Trim"] = GetOrCreateMat("Mat_Dark_Trim", litShader,
-            new Color(0.08f, 0.08f, 0.08f, 1f), 0.2f, 0.4f);
-
-        return dict;
+        return mats;
     }
 
-    private static Material GetOrCreateMat(string matName, Shader shader, Color baseColor, float metallic, float smoothness, Color? emission = null)
+    private static Material GetOrCreateMaterial(string name, Shader shader, Color color, float metallic = 0f, float smoothness = 0.5f)
     {
-        string path = $"{MAT_DIR}/{matName}.mat";
+        string path = $"{MAT_DIR}/{name}.mat";
         Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (mat == null)
         {
             mat = new Material(shader);
             AssetDatabase.CreateAsset(mat, path);
         }
-        else
-        {
-            mat.shader = shader;
-        }
-
-        if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", baseColor);
-        if (mat.HasProperty("_Color")) mat.SetColor("_Color", baseColor);
+        mat.color = color;
         if (mat.HasProperty("_Metallic")) mat.SetFloat("_Metallic", metallic);
         if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", smoothness);
-
-        if (emission.HasValue)
-        {
-            mat.EnableKeyword("_EMISSION");
-            if (mat.HasProperty("_EmissionColor")) mat.SetColor("_EmissionColor", emission.Value);
-        }
-        else
-        {
-            mat.DisableKeyword("_EMISSION");
-            if (mat.HasProperty("_EmissionColor")) mat.SetColor("_EmissionColor", Color.black);
-        }
-
         EditorUtility.SetDirty(mat);
         return mat;
     }
 
-    private static void SetupLighting()
+    private static Material GetOrCreateEmissionMaterial(string name, Shader shader, Color color, Color emission)
     {
-        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = new Color(0.72f, 0.85f, 0.98f);
-        RenderSettings.ambientEquatorColor = new Color(0.55f, 0.62f, 0.70f);
-        RenderSettings.ambientGroundColor = new Color(0.25f, 0.30f, 0.25f);
-
-        GameObject lightObj = GameObject.Find("Directional Light");
-        if (lightObj == null)
+        string path = $"{MAT_DIR}/{name}.mat";
+        Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (mat == null)
         {
-            lightObj = new GameObject("Directional Light");
-            lightObj.AddComponent<Light>();
+            mat = new Material(shader);
+            AssetDatabase.CreateAsset(mat, path);
+        }
+        mat.color = color;
+        mat.EnableKeyword("_EMISSION");
+        if (mat.HasProperty("_EmissionColor")) mat.SetColor("_EmissionColor", emission);
+        EditorUtility.SetDirty(mat);
+        return mat;
+    }
+
+    private static void CleanUpOldObjects()
+    {
+        string[] deleteTargets = new string[] {
+            "HighwayManager", "HighwayTrafficManager", "HighwayOvertakeDetector",
+            "HighwayHUDCanvas", "UI_Canvas", "Canvas", "AudioManager", "TrafficCarPool", "EnvironmentChunks",
+            "ProceduralCity", "CityGrid", "MinimapCamera", "MinimapUI", "EventSystem"
+        };
+
+        foreach (string targetName in deleteTargets)
+        {
+            GameObject obj = GameObject.Find(targetName);
+            while (obj != null)
+            {
+                Object.DestroyImmediate(obj);
+                obj = GameObject.Find(targetName);
+            }
         }
 
-        Light dirLight = lightObj.GetComponent<Light>();
-        dirLight.type = LightType.Directional;
-        dirLight.color = new Color(1.0f, 0.98f, 0.94f);
-        dirLight.intensity = 1.35f;
-        dirLight.shadows = LightShadows.Soft;
-        lightObj.transform.rotation = Quaternion.Euler(48f, -25f, 0f);
+        // Clean up any lingering canvases or event systems so there are never duplicates
+        var allCanvases = Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+        foreach (var c in allCanvases)
+        {
+            Object.DestroyImmediate(c.gameObject);
+        }
+        var allEventSystems = Object.FindObjectsByType<UnityEngine.EventSystems.EventSystem>(FindObjectsSortMode.None);
+        foreach (var es in allEventSystems)
+        {
+            Object.DestroyImmediate(es.gameObject);
+        }
+    }
+
+    private static void SetupLighting()
+    {
+        Light sun = RenderSettings.sun;
+        if (sun == null)
+        {
+            var lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
+            foreach (var l in lights)
+            {
+                if (l.type == LightType.Directional) { sun = l; break; }
+            }
+        }
+
+        if (sun == null)
+        {
+            GameObject sunObj = new GameObject("SunLight");
+            sun = sunObj.AddComponent<Light>();
+            sun.type = LightType.Directional;
+        }
+
+        sun.transform.rotation = Quaternion.Euler(38f, -40f, 0f);
+        sun.color = new Color(1.0f, 0.96f, 0.88f);
+        sun.intensity = 1.35f;
+        sun.shadows = LightShadows.Soft;
+        RenderSettings.sun = sun;
+
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+        RenderSettings.ambientSkyColor = new Color(0.60f, 0.72f, 0.90f);
+        RenderSettings.ambientEquatorColor = new Color(0.45f, 0.52f, 0.60f);
+        RenderSettings.ambientGroundColor = new Color(0.25f, 0.30f, 0.22f);
+
+        RenderSettings.fog = true;
+        RenderSettings.fogMode = FogMode.ExponentialSquared;
+        RenderSettings.fogDensity = 0.0018f;
+        RenderSettings.fogColor = new Color(0.70f, 0.82f, 0.92f);
     }
 
     private static void SetupHighwayUI(HighwayOvertakeDetector detector, HighwayTrafficManager trafficMgr, HighwayManager highwayMgr)
     {
-        GameObject canvasObj = new GameObject("UI_Canvas");
+        GameObject canvasObj = new GameObject("HighwayHUDCanvas");
         Canvas canvas = canvasObj.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.pixelPerfect = true;
+        canvas.sortingOrder = 100;
 
         CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -279,100 +276,136 @@ public class HighwayGameBuilder
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
 
+        // Load procedural UI sprites with 9-slice borders
+        Sprite panelCardSp = LoadProceduralSprite("panel_card", new Vector4(20, 20, 20, 20));
+        Sprite panelCardActiveSp = LoadProceduralSprite("panel_card_active", new Vector4(20, 20, 20, 20));
+        Sprite pillCapsuleSp = LoadProceduralSprite("pill_capsule", new Vector4(28, 28, 28, 28));
+        Sprite squareBtnSp = LoadProceduralSprite("btn_icon_square", new Vector4(18, 18, 18, 18));
+        Sprite playShapeSp = LoadProceduralSprite("btn_play_shape");
+        Sprite modalGlassSp = LoadProceduralSprite("panel_modal_glass", new Vector4(24, 24, 24, 24));
+        Sprite redBadgeSp = LoadProceduralSprite("badge_red_dot");
+
+        // Clean vector icons
+        Sprite iconProfile = LoadProceduralSprite("icon_profile");
+        Sprite iconCoin = LoadProceduralSprite("icon_coin");
+        Sprite iconGem = LoadProceduralSprite("icon_gem");
+        Sprite iconMail = LoadProceduralSprite("icon_mail");
+        Sprite iconSettings = LoadProceduralSprite("icon_settings");
+        Sprite iconEvents = LoadProceduralSprite("icon_events");
+        Sprite iconGarage = LoadProceduralSprite("icon_garage");
+        Sprite iconCustom = LoadProceduralSprite("icon_custom");
+        Sprite iconStore = LoadProceduralSprite("icon_store");
+        Sprite iconCars = LoadProceduralSprite("icon_cars");
+        Sprite iconUpgrades = LoadProceduralSprite("icon_upgrades");
+        Sprite iconMissions = LoadProceduralSprite("icon_missions");
+        Sprite iconLeaderboard = LoadProceduralSprite("icon_leaderboard");
+        Sprite iconClose = LoadProceduralSprite("icon_close");
+
+        // Thumbnails
+        Sprite thumbAlpine = LoadProceduralSprite("thumb_alpine");
+        Sprite thumbDesert = LoadProceduralSprite("thumb_desert");
+        Sprite thumbCity = LoadProceduralSprite("thumb_city");
+        Sprite thumbHighway = LoadProceduralSprite("thumb_highway");
+
         // -------------------------------------------------------------
-        // A. MAIN MENU / LOBBY PANEL (AAA Racing UI Professional System)
+        // A. MAIN MENU / LOBBY PANEL (Clean Backdrop + Procedural UI)
         // -------------------------------------------------------------
         GameObject menuPanel = CreateUIPanel(canvasObj, "MainMenuPanel", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white, true);
         uiMgr.mainMenuPanel = menuPanel;
 
-        // Backdrop Image (Clean first image with hypercar on frozen lake)
-        string texPath = "Assets/Textures/UI/MainMenu_Backdrop.jpg";
-        TextureImporter bgImporter = AssetImporter.GetAtPath(texPath) as TextureImporter;
+        // Clean Backdrop Image (Car on frozen lake)
+        string bgPath = "Assets/Textures/UI/MainMenu_Backdrop.jpg";
+        TextureImporter bgImporter = AssetImporter.GetAtPath(bgPath) as TextureImporter;
         if (bgImporter != null && bgImporter.textureType != TextureImporterType.Sprite)
         {
             bgImporter.textureType = TextureImporterType.Sprite;
             bgImporter.spriteImportMode = SpriteImportMode.Single;
             bgImporter.SaveAndReimport();
         }
-        Sprite menuSprite = AssetDatabase.LoadAssetAtPath<Sprite>(texPath);
-        if (menuSprite != null)
+        Sprite bgSprite = AssetDatabase.LoadAssetAtPath<Sprite>(bgPath);
+        if (bgSprite != null)
         {
             Image bgImg = menuPanel.GetComponent<Image>();
-            bgImg.sprite = menuSprite;
+            bgImg.sprite = bgSprite;
             bgImg.type = Image.Type.Simple;
             bgImg.preserveAspect = false;
         }
 
         // 1. TOP BAR
-        Button profBtn = CreateSpriteButton(menuPanel, "Btn_Profile", LoadSprite("UI_Profile"), new Vector2(0.0107f, 0.8979f), new Vector2(0.1650f, 0.9787f), () => uiMgr.OnProfileClicked());
-        uiMgr.profileBtn = profBtn;
+        // Profile Card (Top-Left)
+        uiMgr.profileBtn = CreateProceduralProfileCard(menuPanel, font, panelCardSp, iconProfile, () => uiMgr.OnProfileClicked());
 
-        Button coinsBtn = CreateSpriteButton(menuPanel, "Btn_Coins", LoadSprite("UI_Coins"), new Vector2(0.7207f, 0.9106f), new Vector2(0.7930f, 0.9787f), () => uiMgr.OnCoinsClicked());
-        uiMgr.coinsBtn = coinsBtn;
+        // Coins Capsule (Top-Right)
+        uiMgr.coinsBtn = CreateProceduralPillButton(menuPanel, "Btn_Coins", new Vector2(1f, 1f), new Vector2(-430f, -24f), new Vector2(150f, 48f),
+            pillCapsuleSp, iconCoin, "15,000", new Color(1f, 0.85f, 0.1f), () => uiMgr.OnCoinsClicked(), font);
 
-        Button gemsBtn = CreateSpriteButton(menuPanel, "Btn_Gems", LoadSprite("UI_Gems"), new Vector2(0.7998f, 0.9106f), new Vector2(0.8770f, 0.9787f), () => uiMgr.OnGemsClicked());
-        uiMgr.gemsBtn = gemsBtn;
+        // Gems Capsule
+        uiMgr.gemsBtn = CreateProceduralPillButton(menuPanel, "Btn_Gems", new Vector2(1f, 1f), new Vector2(-265f, -24f), new Vector2(145f, 48f),
+            pillCapsuleSp, iconGem, "320", new Color(0.1f, 0.85f, 1f), () => uiMgr.OnGemsClicked(), font);
 
-        Button mailBtn = CreateSpriteButton(menuPanel, "Btn_Mail", LoadSprite("UI_Mail"), new Vector2(0.8838f, 0.9106f), new Vector2(0.9258f, 0.9787f), () => uiMgr.OnMailClicked());
-        uiMgr.mailBtn = mailBtn;
+        // Mail Square Button
+        uiMgr.mailBtn = CreateProceduralSquareButton(menuPanel, "Btn_Mail", new Vector2(1f, 1f), new Vector2(-195f, -24f), new Vector2(48f, 48f),
+            squareBtnSp, iconMail, null, () => uiMgr.OnMailClicked());
 
-        Button settingsBtn = CreateSpriteButton(menuPanel, "Btn_Settings", LoadSprite("UI_Settings"), new Vector2(0.9307f, 0.9106f), new Vector2(0.9727f, 0.9787f), () => uiMgr.OnSettingsClicked());
-        uiMgr.settingsBtn = settingsBtn;
+        // Settings Square Button
+        uiMgr.settingsBtn = CreateProceduralSquareButton(menuPanel, "Btn_Settings", new Vector2(1f, 1f), new Vector2(-135f, -24f), new Vector2(48f, 48f),
+            squareBtnSp, iconSettings, null, () => uiMgr.OnSettingsClicked());
 
-        // Windows Exit Button (Top right tiny red close button)
-        CreateMiniButton(menuPanel, "Btn_MenuExit", "✕", font, new Vector2(1f, 1f), new Vector2(-15f, -15f), new Vector2(28f, 28f), () => uiMgr.OnExitGameClicked(), new Color(0.85f, 0.18f, 0.18f, 0.95f), 14);
+        // Desktop Close ✕ Button (Top-Right)
+        CreateProceduralSquareButton(menuPanel, "Btn_DesktopExit", new Vector2(1f, 1f), new Vector2(-75f, -24f), new Vector2(48f, 48f),
+            squareBtnSp, iconClose, new Color(0.85f, 0.18f, 0.18f, 0.95f), () => uiMgr.OnExitGameClicked());
 
-        // 2. RIGHT SIDE MENU (Vertical Column)
-        Button eventsBtn = CreateSpriteButton(menuPanel, "Btn_Events", LoadSprite("UI_Btn_Events"), new Vector2(0.8438f, 0.7809f), new Vector2(0.9824f, 0.8745f), () => uiMgr.OnEventsClicked());
-        uiMgr.eventsBtn = eventsBtn;
+        // 2. RIGHT SIDE MENU (Vertical Action Cards)
+        float startY = 140f;
+        float spacingY = 70f;
+        uiMgr.eventsBtn = CreateProceduralActionCard(menuPanel, "Btn_Events", new Vector2(-30f, startY), panelCardSp, iconEvents, "EVENTS", font, redBadgeSp, () => uiMgr.OnEventsClicked());
+        uiMgr.garageBtn = CreateProceduralActionCard(menuPanel, "Btn_Garage", new Vector2(-30f, startY - spacingY), panelCardSp, iconGarage, "GARAGE", font, null, () => uiMgr.OnGarageClicked());
+        uiMgr.customizationBtn = CreateProceduralActionCard(menuPanel, "Btn_Customization", new Vector2(-30f, startY - spacingY * 2), panelCardSp, iconCustom, "CUSTOMIZATION", font, null, () => uiMgr.OnCustomizationClicked(), 15);
+        uiMgr.storeBtn = CreateProceduralActionCard(menuPanel, "Btn_Store", new Vector2(-30f, startY - spacingY * 3), panelCardSp, iconStore, "STORE", font, null, () => uiMgr.OnStoreClicked());
 
-        Button garageBtn = CreateSpriteButton(menuPanel, "Btn_Garage", LoadSprite("UI_Btn_Garage"), new Vector2(0.8438f, 0.6745f), new Vector2(0.9824f, 0.7681f), () => uiMgr.OnGarageClicked());
-        uiMgr.garageBtn = garageBtn;
+        // 3. BOTTOM BAR (Horizontal Navigation Dock)
+        GameObject bottomDock = CreateUIPanel(menuPanel, "BottomNavDock", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 32f), new Vector2(740f, 56f), new Color(0.06f, 0.10f, 0.18f, 0.88f), false);
+        Image dockImg = bottomDock.GetComponent<Image>();
+        dockImg.sprite = panelCardSp;
+        dockImg.type = Image.Type.Sliced;
 
-        Button customBtn = CreateSpriteButton(menuPanel, "Btn_Customization", LoadSprite("UI_Btn_Custom"), new Vector2(0.8438f, 0.5681f), new Vector2(0.9824f, 0.6617f), () => uiMgr.OnCustomizationClicked());
-        uiMgr.customizationBtn = customBtn;
-
-        Button storeBtn = CreateSpriteButton(menuPanel, "Btn_Store", LoadSprite("UI_Btn_Store"), new Vector2(0.8438f, 0.4617f), new Vector2(0.9824f, 0.5553f), () => uiMgr.OnStoreClicked());
-        uiMgr.storeBtn = storeBtn;
-
-        // 3. BOTTOM BAR (Horizontal Navigation Row)
-        Button carsBtn = CreateSpriteButton(menuPanel, "Btn_Cars", LoadSprite("UI_Btn_Cars"), new Vector2(0.2773f, 0.0362f), new Vector2(0.3867f, 0.1191f), () => uiMgr.OnCarsClicked());
-        uiMgr.carsBtn = carsBtn;
-
-        Button upgradesBtn = CreateSpriteButton(menuPanel, "Btn_Upgrades", LoadSprite("UI_Btn_Upgrades"), new Vector2(0.3945f, 0.0362f), new Vector2(0.5088f, 0.1191f), () => uiMgr.OnUpgradesClicked());
-        uiMgr.upgradesBtn = upgradesBtn;
-
-        Button missionsBtn = CreateSpriteButton(menuPanel, "Btn_Missions", LoadSprite("UI_Btn_Missions"), new Vector2(0.5166f, 0.0362f), new Vector2(0.6309f, 0.1191f), () => uiMgr.OnMissionsClicked());
-        uiMgr.missionsBtn = missionsBtn;
-
-        Button leaderboardBtn = CreateSpriteButton(menuPanel, "Btn_Leaderboard", LoadSprite("UI_Btn_Leaderboard"), new Vector2(0.6387f, 0.0362f), new Vector2(0.7676f, 0.1191f), () => uiMgr.OnLeaderboardClicked());
-        uiMgr.leaderboardBtn = leaderboardBtn;
+        uiMgr.carsBtn = CreateProceduralDockButton(bottomDock, "Btn_Cars", -270f, iconCars, "Cars", font, () => uiMgr.OnCarsClicked());
+        uiMgr.upgradesBtn = CreateProceduralDockButton(bottomDock, "Btn_Upgrades", -90f, iconUpgrades, "Upgrades", font, () => uiMgr.OnUpgradesClicked());
+        uiMgr.missionsBtn = CreateProceduralDockButton(bottomDock, "Btn_Missions", 90f, iconMissions, "Missions", font, () => uiMgr.OnMissionsClicked());
+        uiMgr.leaderboardBtn = CreateProceduralDockButton(bottomDock, "Btn_Leaderboard", 270f, iconLeaderboard, "Leaderboard", font, () => uiMgr.OnLeaderboardClicked());
 
         // 4. BOTTOM-LEFT: LOCATION SELECTOR
-        CreateSpriteButton(menuPanel, "UI_Loc_Header", LoadSprite("UI_Loc_Header"), new Vector2(0.0186f, 0.3064f), new Vector2(0.1865f, 0.3702f), null);
+        GameObject locContainer = CreateUIPanel(menuPanel, "LocationSelector", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(30f, 32f), new Vector2(280f, 275f), Color.clear, false);
 
-        Button alpineMapBtn = CreateSpriteButton(menuPanel, "MapBtn_Alpine", LoadSprite("UI_Loc_Alpine"), new Vector2(0.0186f, 0.2383f), new Vector2(0.1865f, 0.3064f), () => uiMgr.OnMapSelected("Alpine Circuit", false));
-        uiMgr.mapAlpineBtn = alpineMapBtn;
+        // Header
+        GameObject locHeader = CreateUIPanel(locContainer, "HeaderCard", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, 0f), new Vector2(280f, 40f), Color.white, false);
+        Image lhImg = locHeader.GetComponent<Image>();
+        lhImg.sprite = panelCardSp;
+        lhImg.type = Image.Type.Sliced;
+        Text headerTxt = CreateUIText(locHeader, "Title", "📍 SELECT LOCATION ▲", font, 13, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.15f), new Vector2(0.5f, 0.5f), new Vector2(260f, 36f));
+        headerTxt.fontStyle = FontStyle.Bold;
 
-        Button desertMapBtn = CreateSpriteButton(menuPanel, "MapBtn_Desert", LoadSprite("UI_Loc_Desert"), new Vector2(0.0186f, 0.1702f), new Vector2(0.1865f, 0.2383f), () => uiMgr.OnMapSelected("Desert Rush", false));
-        uiMgr.mapDesertBtn = desertMapBtn;
-
-        Button cityMapBtn = CreateSpriteButton(menuPanel, "MapBtn_City", LoadSprite("UI_Loc_City"), new Vector2(0.0186f, 0.1021f), new Vector2(0.1865f, 0.1702f), () => uiMgr.OnMapSelected("City Night", false));
-        uiMgr.mapCityBtn = cityMapBtn;
-
-        Button highwayMapBtn = CreateSpriteButton(menuPanel, "MapBtn_Highway", LoadSprite("UI_Loc_Highway"), new Vector2(0.0186f, 0.0340f), new Vector2(0.1865f, 0.1021f), () => uiMgr.OnMapSelected("Coastal Highway", true));
-        uiMgr.mapHighwayBtn = highwayMapBtn;
+        // 4 Map Cards Stack
+        uiMgr.mapAlpineBtn = CreateProceduralMapCard(locContainer, "MapBtn_Alpine", -46f, panelCardSp, thumbAlpine, "Alpine Circuit", "🔒 LOCKED", new Color(0.7f, 0.7f, 0.7f), () => uiMgr.OnMapSelected("Alpine Circuit", false), font);
+        uiMgr.mapDesertBtn = CreateProceduralMapCard(locContainer, "MapBtn_Desert", -102f, panelCardSp, thumbDesert, "Desert Rush", "🔒 LOCKED", new Color(0.7f, 0.7f, 0.7f), () => uiMgr.OnMapSelected("Desert Rush", false), font);
+        uiMgr.mapCityBtn = CreateProceduralMapCard(locContainer, "MapBtn_City", -158f, panelCardSp, thumbCity, "City Night", "🔒 LOCKED", new Color(0.7f, 0.7f, 0.7f), () => uiMgr.OnMapSelected("City Night", false), font);
+        uiMgr.mapHighwayBtn = CreateProceduralMapCard(locContainer, "MapBtn_Highway", -214f, panelCardActiveSp, thumbHighway, "Coastal Highway", "● READY TO PLAY", new Color(1f, 0.85f, 0.1f), () => uiMgr.OnMapSelected("Coastal Highway", true), font, true);
 
         // 5. BOTTOM-RIGHT: LARGE PLAY BUTTON
-        Button playBtn = CreateSpriteButton(menuPanel, "Btn_Play", LoadSprite("UI_Btn_Play"), new Vector2(0.7793f, 0.0277f), new Vector2(0.9863f, 0.1745f), () => uiMgr.StartHighwayGame());
-        uiMgr.playButton = playBtn;
+        uiMgr.playButton = CreateProceduralPlayButton(menuPanel, font, playShapeSp, () => uiMgr.StartHighwayGame());
 
-        // 6. FLOATING TOAST NOTIFICATIONS (Top Center)
+        // 6. INTERACTIVE MODAL DIALOG POPUP
+        SetupProceduralModalSystem(canvasObj, uiMgr, font, modalGlassSp, panelCardActiveSp, iconClose);
+
+        // 7. FLOATING TOAST NOTIFICATION
         GameObject toast = CreateUIPanel(canvasObj, "ToastPanel", new Vector2(0.5f, 0.86f), new Vector2(0.5f, 0.86f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(620f, 52f), new Color(0.06f, 0.09f, 0.14f, 0.96f), false);
+        Image tImg = toast.GetComponent<Image>();
+        tImg.sprite = panelCardSp;
+        tImg.type = Image.Type.Sliced;
         CanvasGroup toastCg = toast.AddComponent<CanvasGroup>();
         uiMgr.toastCanvasGroup = toastCg;
         uiMgr.toastPanel = toast;
-        Text tText = CreateUIText(toast, "ToastText", "Welcome, RacerSrihari!", font, 18, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.1f), new Vector2(0.5f, 0.5f), new Vector2(600f, 44f));
+        Text tText = CreateUIText(toast, "ToastText", "Welcome, RacerSrihari!", font, 17, TextAnchor.MiddleCenter, new Color(1f, 0.88f, 0.15f), new Vector2(0.5f, 0.5f), new Vector2(600f, 44f));
         tText.fontStyle = FontStyle.Bold;
         uiMgr.toastText = tText;
         toast.SetActive(false);
@@ -394,6 +427,8 @@ public class HighwayGameBuilder
 
         // 1. Top Overtake Stats Bar
         GameObject topBar = CreateUIPanel(gameplayHUD, "TopStatsBar", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(620f, 75f), new Color(0.08f, 0.10f, 0.14f, 0.88f), false);
+        topBar.GetComponent<Image>().sprite = panelCardSp;
+        topBar.GetComponent<Image>().type = Image.Type.Sliced;
 
         Text overtakeTxt = CreateUIText(topBar, "OvertakeCountText", "OVERTAKES: 0", font, 24, TextAnchor.MiddleCenter, Color.white, new Vector2(0.28f, 0.7f), new Vector2(260f, 35f));
         overtakeTxt.fontStyle = FontStyle.Bold;
@@ -412,6 +447,8 @@ public class HighwayGameBuilder
 
         // 2. Center Animated Overtake Pop-up
         GameObject popupObj = CreateUIPanel(gameplayHUD, "OvertakePopup", new Vector2(0.5f, 0.72f), new Vector2(0.5f, 0.72f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(500f, 65f), new Color(0.10f, 0.12f, 0.18f, 0.92f), false);
+        popupObj.GetComponent<Image>().sprite = panelCardSp;
+        popupObj.GetComponent<Image>().type = Image.Type.Sliced;
         CanvasGroup cg = popupObj.AddComponent<CanvasGroup>();
         uiMgr.popupCanvasGroup = cg;
 
@@ -421,6 +458,8 @@ public class HighwayGameBuilder
 
         // 3. Top-Right Speedometer
         GameObject speedo = CreateUIPanel(gameplayHUD, "Speedometer", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -70f), new Vector2(220f, 125f), new Color(0.08f, 0.10f, 0.14f, 0.88f), false);
+        speedo.GetComponent<Image>().sprite = panelCardSp;
+        speedo.GetComponent<Image>().type = Image.Type.Sliced;
 
         Text spdTxt = CreateUIText(speedo, "SpeedNumber", "0", font, 52, TextAnchor.UpperCenter, Color.white, new Vector2(0.42f, 0.65f), new Vector2(120f, 60f));
         spdTxt.fontStyle = FontStyle.Bold;
@@ -483,6 +522,8 @@ public class HighwayGameBuilder
         // C. PAUSE MENU PANEL
         // -------------------------------------------------------------
         GameObject pause = CreateUIPanel(canvasObj, "PausePanel", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(420f, 350f), new Color(0.08f, 0.10f, 0.14f, 0.97f), true);
+        pause.GetComponent<Image>().sprite = modalGlassSp;
+        pause.GetComponent<Image>().type = Image.Type.Sliced;
         CreateUIText(pause, "PauseTitle", "GAME PAUSED", font, 28, TextAnchor.MiddleCenter, Color.white, new Vector2(0.5f, 0.86f), new Vector2(320f, 40f));
 
         Button resumeBtn = CreateMiniButton(pause, "ResumeBtn", "▶ RESUME GAME", font, new Vector2(0.5f, 0.5f), new Vector2(0f, 50f), new Vector2(280f, 42f), () => uiMgr.OnResumeClicked(), new Color(0.15f, 0.65f, 0.32f, 0.95f), 15);
@@ -499,10 +540,407 @@ public class HighwayGameBuilder
         uiMgr.pausePanel = pause;
     }
 
+    #region Procedural UI Component Builders
+    private static Button CreateProceduralProfileCard(GameObject parent, Font font, Sprite cardSprite, Sprite icon, UnityEngine.Events.UnityAction action)
+    {
+        GameObject go = new GameObject("Btn_Profile");
+        go.transform.SetParent(parent.transform, false);
+
+        RectTransform rt = go.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = new Vector2(30f, -24f);
+        rt.sizeDelta = new Vector2(280f, 70f);
+
+        Image img = go.AddComponent<Image>();
+        img.sprite = cardSprite;
+        img.type = Image.Type.Sliced;
+        img.color = Color.white;
+
+        Button btn = go.AddComponent<Button>();
+        btn.onClick.AddListener(action);
+
+        var feedback = go.AddComponent<UIButtonFeedback>();
+        feedback.normalScale = 1.0f;
+        feedback.hoverScale = 1.03f;
+        feedback.pressedScale = 0.95f;
+
+        // Avatar Icon
+        GameObject iconObj = new GameObject("AvatarIcon");
+        iconObj.transform.SetParent(go.transform, false);
+        RectTransform iRt = iconObj.AddComponent<RectTransform>();
+        iRt.anchorMin = new Vector2(0f, 0.5f);
+        iRt.anchorMax = new Vector2(0f, 0.5f);
+        iRt.pivot = new Vector2(0f, 0.5f);
+        iRt.anchoredPosition = new Vector2(10f, 0f);
+        iRt.sizeDelta = new Vector2(50f, 50f);
+        Image iImg = iconObj.AddComponent<Image>();
+        iImg.sprite = icon;
+
+        // Name
+        Text nameTxt = CreateUIText(go, "Name", "RacerSrihari", font, 17, TextAnchor.MiddleLeft, Color.white, new Vector2(0f, 0.5f), new Vector2(190f, 24f));
+        nameTxt.fontStyle = FontStyle.Bold;
+        nameTxt.rectTransform.anchoredPosition = new Vector2(170f, 12f);
+
+        // Level Badge
+        Text lvTxt = CreateUIText(go, "Level", "Lv. 28  PRO", font, 12, TextAnchor.MiddleLeft, new Color(1f, 0.85f, 0.15f), new Vector2(0f, 0.5f), new Vector2(190f, 20f));
+        lvTxt.fontStyle = FontStyle.Bold;
+        lvTxt.rectTransform.anchoredPosition = new Vector2(170f, -12f);
+
+        return btn;
+    }
+
+    private static Button CreateProceduralPillButton(GameObject parent, string name, Vector2 anchor, Vector2 pos, Vector2 size, Sprite pillSprite, Sprite icon, string text, Color textColor, UnityEngine.Events.UnityAction action, Font font)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent.transform, false);
+
+        RectTransform rt = go.AddComponent<RectTransform>();
+        rt.anchorMin = anchor;
+        rt.anchorMax = anchor;
+        rt.pivot = anchor;
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = size;
+
+        Image img = go.AddComponent<Image>();
+        img.sprite = pillSprite;
+        img.type = Image.Type.Sliced;
+        img.color = Color.white;
+
+        Button btn = go.AddComponent<Button>();
+        btn.onClick.AddListener(action);
+
+        var feedback = go.AddComponent<UIButtonFeedback>();
+        feedback.normalScale = 1.0f;
+        feedback.hoverScale = 1.04f;
+        feedback.pressedScale = 0.94f;
+
+        // Icon
+        GameObject iconObj = new GameObject("Icon");
+        iconObj.transform.SetParent(go.transform, false);
+        RectTransform iRt = iconObj.AddComponent<RectTransform>();
+        iRt.anchorMin = new Vector2(0f, 0.5f);
+        iRt.anchorMax = new Vector2(0f, 0.5f);
+        iRt.pivot = new Vector2(0f, 0.5f);
+        iRt.anchoredPosition = new Vector2(10f, 0f);
+        iRt.sizeDelta = new Vector2(32f, 32f);
+        Image iImg = iconObj.AddComponent<Image>();
+        iImg.sprite = icon;
+
+        // Text
+        Text valTxt = CreateUIText(go, "Value", text, font, 16, TextAnchor.MiddleLeft, Color.white, new Vector2(0f, 0.5f), new Vector2(size.x - 65f, 30f));
+        valTxt.fontStyle = FontStyle.Bold;
+        valTxt.rectTransform.anchoredPosition = new Vector2(46f + (size.x - 65f) * 0.5f, 0f);
+
+        // Plus
+        Text plusTxt = CreateUIText(go, "Plus", "+", font, 18, TextAnchor.MiddleRight, textColor, new Vector2(1f, 0.5f), new Vector2(30f, 30f));
+        plusTxt.fontStyle = FontStyle.Bold;
+        plusTxt.rectTransform.anchoredPosition = new Vector2(-12f, 0f);
+
+        return btn;
+    }
+
+    private static Button CreateProceduralSquareButton(GameObject parent, string name, Vector2 anchor, Vector2 pos, Vector2 size, Sprite squareSprite, Sprite icon, Color? tint, UnityEngine.Events.UnityAction action)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent.transform, false);
+
+        RectTransform rt = go.AddComponent<RectTransform>();
+        rt.anchorMin = anchor;
+        rt.anchorMax = anchor;
+        rt.pivot = anchor;
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = size;
+
+        Image img = go.AddComponent<Image>();
+        img.sprite = squareSprite;
+        img.type = Image.Type.Sliced;
+        img.color = tint ?? Color.white;
+
+        Button btn = go.AddComponent<Button>();
+        btn.onClick.AddListener(action);
+
+        var feedback = go.AddComponent<UIButtonFeedback>();
+        feedback.normalScale = 1.0f;
+        feedback.hoverScale = 1.06f;
+        feedback.pressedScale = 0.92f;
+
+        if (icon != null)
+        {
+            GameObject iconObj = new GameObject("Icon");
+            iconObj.transform.SetParent(go.transform, false);
+            RectTransform iRt = iconObj.AddComponent<RectTransform>();
+            iRt.anchorMin = new Vector2(0.5f, 0.5f);
+            iRt.anchorMax = new Vector2(0.5f, 0.5f);
+            iRt.pivot = new Vector2(0.5f, 0.5f);
+            iRt.anchoredPosition = Vector2.zero;
+            iRt.sizeDelta = new Vector2(size.x * 0.55f, size.y * 0.55f);
+            Image iImg = iconObj.AddComponent<Image>();
+            iImg.sprite = icon;
+        }
+
+        return btn;
+    }
+
+    private static Button CreateProceduralActionCard(GameObject parent, string name, Vector2 pos, Sprite cardSprite, Sprite icon, string title, Font font, Sprite badge, UnityEngine.Events.UnityAction action, int fontSize = 16)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent.transform, false);
+
+        RectTransform rt = go.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(1f, 0.5f);
+        rt.anchorMax = new Vector2(1f, 0.5f);
+        rt.pivot = new Vector2(1f, 0.5f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = new Vector2(230f, 56f);
+
+        Image img = go.AddComponent<Image>();
+        img.sprite = cardSprite;
+        img.type = Image.Type.Sliced;
+        img.color = Color.white;
+
+        Button btn = go.AddComponent<Button>();
+        btn.onClick.AddListener(action);
+
+        var feedback = go.AddComponent<UIButtonFeedback>();
+        feedback.normalScale = 1.0f;
+        feedback.hoverScale = 1.04f;
+        feedback.pressedScale = 0.94f;
+
+        // Icon
+        GameObject iconObj = new GameObject("Icon");
+        iconObj.transform.SetParent(go.transform, false);
+        RectTransform iRt = iconObj.AddComponent<RectTransform>();
+        iRt.anchorMin = new Vector2(0f, 0.5f);
+        iRt.anchorMax = new Vector2(0f, 0.5f);
+        iRt.pivot = new Vector2(0f, 0.5f);
+        iRt.anchoredPosition = new Vector2(14f, 0f);
+        iRt.sizeDelta = new Vector2(36f, 36f);
+        Image iImg = iconObj.AddComponent<Image>();
+        iImg.sprite = icon;
+
+        // Text
+        Text t = CreateUIText(go, "Title", title, font, fontSize, TextAnchor.MiddleLeft, Color.white, new Vector2(0f, 0.5f), new Vector2(150f, 30f));
+        t.fontStyle = FontStyle.Bold;
+        t.rectTransform.anchoredPosition = new Vector2(58f + 75f, 0f);
+
+        // Chevron ›
+        Text chev = CreateUIText(go, "Chev", "›", font, 22, TextAnchor.MiddleRight, new Color(0.7f, 0.8f, 0.95f, 0.8f), new Vector2(1f, 0.5f), new Vector2(30f, 30f));
+        chev.fontStyle = FontStyle.Bold;
+        chev.rectTransform.anchoredPosition = new Vector2(-12f, 0f);
+
+        // Optional Notification Badge
+        if (badge != null)
+        {
+            GameObject bObj = new GameObject("NotificationBadge");
+            bObj.transform.SetParent(go.transform, false);
+            RectTransform bRt = bObj.AddComponent<RectTransform>();
+            bRt.anchorMin = new Vector2(1f, 1f);
+            bRt.anchorMax = new Vector2(1f, 1f);
+            bRt.pivot = new Vector2(0.5f, 0.5f);
+            bRt.anchoredPosition = new Vector2(-12f, -12f);
+            bRt.sizeDelta = new Vector2(20f, 20f);
+            Image bImg = bObj.AddComponent<Image>();
+            bImg.sprite = badge;
+        }
+
+        return btn;
+    }
+
+    private static Button CreateProceduralDockButton(GameObject parent, string name, float posX, Sprite icon, string title, Font font, UnityEngine.Events.UnityAction action)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent.transform, false);
+
+        RectTransform rt = go.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = new Vector2(posX, 0f);
+        rt.sizeDelta = new Vector2(170f, 44f);
+
+        Image img = go.AddComponent<Image>();
+        img.color = new Color(0.12f, 0.18f, 0.28f, 0.70f);
+
+        Button btn = go.AddComponent<Button>();
+        btn.onClick.AddListener(action);
+
+        var feedback = go.AddComponent<UIButtonFeedback>();
+        feedback.normalScale = 1.0f;
+        feedback.hoverScale = 1.05f;
+        feedback.pressedScale = 0.93f;
+
+        // Icon
+        GameObject iconObj = new GameObject("Icon");
+        iconObj.transform.SetParent(go.transform, false);
+        RectTransform iRt = iconObj.AddComponent<RectTransform>();
+        iRt.anchorMin = new Vector2(0f, 0.5f);
+        iRt.anchorMax = new Vector2(0f, 0.5f);
+        iRt.pivot = new Vector2(0f, 0.5f);
+        iRt.anchoredPosition = new Vector2(14f, 0f);
+        iRt.sizeDelta = new Vector2(28f, 28f);
+        Image iImg = iconObj.AddComponent<Image>();
+        iImg.sprite = icon;
+
+        // Title
+        Text t = CreateUIText(go, "Title", title, font, 15, TextAnchor.MiddleLeft, Color.white, new Vector2(0f, 0.5f), new Vector2(115f, 30f));
+        t.fontStyle = FontStyle.Bold;
+        t.rectTransform.anchoredPosition = new Vector2(48f + 57f, 0f);
+
+        return btn;
+    }
+
+    private static Button CreateProceduralMapCard(GameObject parent, string name, float posY, Sprite cardSprite, Sprite thumb, string title, string badge, Color badgeColor, UnityEngine.Events.UnityAction action, Font font, bool isSelected = false)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent.transform, false);
+
+        RectTransform rt = go.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 1f);
+        rt.anchorMax = new Vector2(0.5f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.anchoredPosition = new Vector2(0f, posY);
+        rt.sizeDelta = new Vector2(280f, 52f);
+
+        Image img = go.AddComponent<Image>();
+        img.sprite = cardSprite;
+        img.type = Image.Type.Sliced;
+        img.color = Color.white;
+
+        Button btn = go.AddComponent<Button>();
+        btn.onClick.AddListener(action);
+
+        var feedback = go.AddComponent<UIButtonFeedback>();
+        feedback.normalScale = 1.0f;
+        feedback.hoverScale = 1.03f;
+        feedback.pressedScale = 0.95f;
+        feedback.isSelected = isSelected;
+
+        // Thumbnail
+        GameObject thObj = new GameObject("Thumb");
+        thObj.transform.SetParent(go.transform, false);
+        RectTransform tRt = thObj.AddComponent<RectTransform>();
+        tRt.anchorMin = new Vector2(0f, 0.5f);
+        tRt.anchorMax = new Vector2(0f, 0.5f);
+        tRt.pivot = new Vector2(0f, 0.5f);
+        tRt.anchoredPosition = new Vector2(8f, 0f);
+        tRt.sizeDelta = new Vector2(58f, 38f);
+        Image tImg = thObj.AddComponent<Image>();
+        tImg.sprite = thumb;
+
+        // Title
+        Text t = CreateUIText(go, "Title", title, font, 14, TextAnchor.MiddleLeft, Color.white, new Vector2(0f, 0.5f), new Vector2(140f, 22f));
+        t.fontStyle = FontStyle.Bold;
+        t.rectTransform.anchoredPosition = new Vector2(74f + 70f, 8f);
+
+        // Badge
+        Text bTxt = CreateUIText(go, "Badge", badge, font, 11, TextAnchor.MiddleLeft, badgeColor, new Vector2(0f, 0.5f), new Vector2(140f, 18f));
+        bTxt.fontStyle = FontStyle.Bold;
+        bTxt.rectTransform.anchoredPosition = new Vector2(74f + 70f, -10f);
+
+        return btn;
+    }
+
+    private static Button CreateProceduralPlayButton(GameObject parent, Font font, Sprite playShape, UnityEngine.Events.UnityAction action)
+    {
+        GameObject go = new GameObject("Btn_Play");
+        go.transform.SetParent(parent.transform, false);
+
+        RectTransform rt = go.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(1f, 0f);
+        rt.anchorMax = new Vector2(1f, 0f);
+        rt.pivot = new Vector2(1f, 0f);
+        rt.anchoredPosition = new Vector2(-30f, 32f);
+        rt.sizeDelta = new Vector2(320f, 82f);
+
+        Image img = go.AddComponent<Image>();
+        img.sprite = playShape;
+        img.type = Image.Type.Simple;
+        img.color = Color.white;
+
+        Button btn = go.AddComponent<Button>();
+        btn.onClick.AddListener(action);
+
+        var feedback = go.AddComponent<UIButtonFeedback>();
+        feedback.normalScale = 1.0f;
+        feedback.hoverScale = 1.07f;
+        feedback.pressedScale = 0.92f;
+
+        // Title: PLAY ▶
+        Text playTxt = CreateUIText(go, "PlayText", "PLAY ▶", font, 38, TextAnchor.MiddleCenter, new Color(0.06f, 0.09f, 0.16f), new Vector2(0.5f, 0.58f), new Vector2(280f, 48f));
+        playTxt.fontStyle = FontStyle.Bold;
+
+        // Subtitle: COASTAL HIGHWAY
+        Text subTxt = CreateUIText(go, "SubText", "COASTAL HIGHWAY • 4 LANES", font, 11, TextAnchor.MiddleCenter, new Color(0.24f, 0.18f, 0.02f), new Vector2(0.5f, 0.22f), new Vector2(280f, 20f));
+        subTxt.fontStyle = FontStyle.Bold;
+
+        return btn;
+    }
+
+    private static void SetupProceduralModalSystem(GameObject canvasObj, HighwayUIManager uiMgr, Font font, Sprite modalBg, Sprite actionBtnBg, Sprite closeIcon)
+    {
+        // Fullscreen Modal Panel (Dark Dimmed Scrim)
+        GameObject modalObj = CreateUIPanel(canvasObj, "MenuModalPanel", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0f, 0f, 0f, 0.75f), true);
+        uiMgr.menuModalPanel = modalObj;
+
+        // Centered Modal Window
+        GameObject win = CreateUIPanel(modalObj, "ModalWindow", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(620f, 440f), Color.white, true);
+        Image winImg = win.GetComponent<Image>();
+        winImg.sprite = modalBg;
+        winImg.type = Image.Type.Sliced;
+
+        // Title
+        Text titleTxt = CreateUIText(win, "ModalTitle", "MODAL TITLE", font, 22, TextAnchor.MiddleCenter, Color.white, new Vector2(0.5f, 1f), new Vector2(460f, 50f));
+        titleTxt.fontStyle = FontStyle.Bold;
+        titleTxt.rectTransform.anchoredPosition = new Vector2(0f, -32f);
+        uiMgr.modalTitleText = titleTxt;
+
+        // Close ✕ Button
+        Button closeBtn = CreateProceduralSquareButton(win, "Btn_ModalClose", new Vector2(1f, 1f), new Vector2(-20f, -20f), new Vector2(40f, 40f),
+            actionBtnBg, closeIcon, null, () => uiMgr.CloseModal());
+        uiMgr.modalCloseBtn = closeBtn;
+
+        // Body Text
+        Text bodyTxt = CreateUIText(win, "ModalBody", "Content goes here...", font, 16, TextAnchor.UpperLeft, new Color(0.85f, 0.92f, 1f), new Vector2(0.5f, 0.5f), new Vector2(520f, 240f));
+        bodyTxt.rectTransform.anchoredPosition = new Vector2(0f, 8f);
+        uiMgr.modalBodyText = bodyTxt;
+
+        // Action Button
+        GameObject actGo = new GameObject("Btn_ModalAction");
+        actGo.transform.SetParent(win.transform, false);
+        RectTransform aRt = actGo.AddComponent<RectTransform>();
+        aRt.anchorMin = new Vector2(0.5f, 0f);
+        aRt.anchorMax = new Vector2(0.5f, 0f);
+        aRt.pivot = new Vector2(0.5f, 0f);
+        aRt.anchoredPosition = new Vector2(0f, 26f);
+        aRt.sizeDelta = new Vector2(260f, 50f);
+
+        Image aImg = actGo.AddComponent<Image>();
+        aImg.sprite = actionBtnBg;
+        aImg.type = Image.Type.Sliced;
+
+        Button actBtn = actGo.AddComponent<Button>();
+        var feedback = actGo.AddComponent<UIButtonFeedback>();
+        feedback.normalScale = 1.0f;
+        feedback.hoverScale = 1.04f;
+        feedback.pressedScale = 0.94f;
+
+        Text actTxt = CreateUIText(actGo, "ActionText", "CONFIRM", font, 16, TextAnchor.MiddleCenter, new Color(1f, 0.90f, 0.20f), new Vector2(0.5f, 0.5f), new Vector2(240f, 40f));
+        actTxt.fontStyle = FontStyle.Bold;
+
+        uiMgr.modalActionBtn = actBtn;
+        uiMgr.modalActionBtnText = actTxt;
+
+        modalObj.SetActive(false);
+    }
+    #endregion
+
     private static void SetupAudio()
     {
         GameObject audioObj = new GameObject("AudioManager");
         audioObj.AddComponent<CarAudioManager>();
+        audioObj.AddComponent<ProceduralUISound>();
     }
 
     private static void SetupPlayerCarAndCamera()
@@ -546,8 +984,8 @@ public class HighwayGameBuilder
                     dynamicFriction = 0.02f,
                     staticFriction = 0.02f,
                     bounciness = 0.0f,
-                    frictionCombine = PhysicMaterialCombine.Minimum,
-                    bounceCombine = PhysicMaterialCombine.Minimum
+                    frictionCombine = PhysicsMaterialCombine.Minimum,
+                    bounceCombine = PhysicsMaterialCombine.Minimum
                 };
                 AssetDatabase.CreateAsset(tireMat, "Assets/Materials/Car/Mat_Car_TireFriction.physicMaterial");
             }
@@ -580,33 +1018,41 @@ public class HighwayGameBuilder
                 GameObject wColGo = new GameObject(wheelNames[w]);
                 wColGo.transform.SetParent(wcObj.transform, false);
                 wColGo.transform.localPosition = wheelOffsets[w];
-                var sc = wColGo.AddComponent<SphereCollider>();
+                SphereCollider sc = wColGo.AddComponent<SphereCollider>();
                 sc.radius = 0.34f;
                 sc.material = tireMat;
             }
 
             var cc = car.GetComponent<CarController>();
-            if (cc == null) cc = car.AddComponent<CarController>();
-            cc.accelerationRate = 28f;
-            cc.maxSpeedKmh = 195f;
-            cc.steerSpeed = 8.5f;
-            cc.isGameplayActive = false;
-
-            var cv = car.GetComponent<CarVisuals>();
-            if (cv == null) cv = car.AddComponent<CarVisuals>();
+            if (cc != null)
+            {
+                cc.maxSpeedKmh = 240f;
+                cc.accelerationRate = 32f;
+                cc.brakePower = 45f;
+                cc.reverseAccelerationRate = 18f;
+                cc.steerSpeed = 8.5f;
+                cc.maxSteerAngle = 30f;
+                cc.driftLateralGrip = 2.2f;
+                cc.enabled = false; // Disabled while in main menu
+            }
+            if (rb != null)
+            {
+                rb.isKinematic = true; // Frozen while in main menu
+            }
         }
 
-        GameObject camObj = GameObject.FindWithTag("MainCamera");
-        if (camObj == null)
+        // Camera Follower Setup
+        Camera mainCam = Camera.main;
+        if (mainCam == null)
         {
-            var cam = Object.FindFirstObjectByType<Camera>();
-            if (cam != null) camObj = cam.gameObject;
+            var camObj = GameObject.Find("Main Camera");
+            if (camObj != null) mainCam = camObj.GetComponent<Camera>();
         }
 
-        if (camObj != null && car != null)
+        if (mainCam != null && car != null)
         {
-            var camFollower = camObj.GetComponent<CarCameraController>();
-            if (camFollower == null) camFollower = camObj.AddComponent<CarCameraController>();
+            var camFollower = mainCam.GetComponent<CarCameraController>();
+            if (camFollower == null) camFollower = mainCam.gameObject.AddComponent<CarCameraController>();
             camFollower.target = car.transform;
             camFollower.currentMode = CarCameraController.CameraViewMode.ChaseMedium;
             camFollower.mediumOffset = new Vector3(0f, 2.3f, -6.5f);
@@ -615,50 +1061,33 @@ public class HighwayGameBuilder
     }
 
     #region UI Helper Methods
-    private static Sprite LoadSprite(string name)
+    private static Sprite LoadProceduralSprite(string name, Vector4? border = null)
     {
-        string path = $"Assets/Textures/UI/Sprites/{name}.png";
+        string path = $"Assets/Textures/UI/Procedural/{name}.png";
         TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
-        if (importer != null && importer.textureType != TextureImporterType.Sprite)
+        if (importer != null)
         {
-            importer.textureType = TextureImporterType.Sprite;
-            importer.spriteImportMode = SpriteImportMode.Single;
-            importer.alphaIsTransparency = true;
-            importer.SaveAndReimport();
+            bool needReimport = false;
+            if (importer.textureType != TextureImporterType.Sprite)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.alphaIsTransparency = true;
+                needReimport = true;
+            }
+            if (border.HasValue && importer.spriteBorder != border.Value)
+            {
+                importer.spriteBorder = border.Value;
+                needReimport = true;
+            }
+            if (needReimport)
+            {
+                importer.SaveAndReimport();
+            }
         }
         return AssetDatabase.LoadAssetAtPath<Sprite>(path);
     }
 
-    private static Button CreateSpriteButton(GameObject parent, string name, Sprite sprite, Vector2 anchorMin, Vector2 anchorMax, UnityEngine.Events.UnityAction action)
-    {
-        GameObject btnObj = new GameObject(name);
-        btnObj.transform.SetParent(parent.transform, false);
-
-        RectTransform rt = btnObj.AddComponent<RectTransform>();
-        rt.anchorMin = anchorMin;
-        rt.anchorMax = anchorMax;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
-
-        Image img = btnObj.AddComponent<Image>();
-        img.sprite = sprite;
-        img.type = Image.Type.Simple;
-        img.preserveAspect = false;
-        img.raycastTarget = true;
-
-        Button btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = img;
-
-        ColorBlock cb = btn.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1.18f, 1.18f, 1.18f, 1f);
-        cb.pressedColor = new Color(0.78f, 0.78f, 0.78f, 1f);
-        cb.selectedColor = Color.white;
-        btn.colors = cb;
-
-        if (action != null) btn.onClick.AddListener(action);
-        return btn;
-    }
     private static GameObject CreateUIPanel(GameObject parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 pos, Vector2 size, Color color, bool raycast = false)
     {
         GameObject panel = new GameObject(name);
@@ -718,6 +1147,11 @@ public class HighwayGameBuilder
         Button btn = btnObj.AddComponent<Button>();
         btn.targetGraphic = img;
         btn.onClick.AddListener(action);
+
+        var feedback = btnObj.AddComponent<UIButtonFeedback>();
+        feedback.normalScale = 1.0f;
+        feedback.hoverScale = 1.06f;
+        feedback.pressedScale = 0.92f;
 
         Text txt = CreateUIText(btnObj, "Text", text, font, fontSize, TextAnchor.MiddleCenter, Color.white, new Vector2(0.5f, 0.5f), size, false);
         txt.fontStyle = FontStyle.Bold;
