@@ -1,0 +1,62 @@
+fileFormatVersion: 2
+guid: b1000001000000000000000000000001
+ModelImporter:
+  serializedVersion: 22200
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Body_GlossyBlack
+    second: {fileID: 2100000, guid: a1000001000000000000000000000001, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Glass_Tinted
+    second: {fileID: 2100000, guid: a1000001000000000000000000000002, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Headlight_LED
+    second: {fileID: 2100000, guid: a1000001000000000000000000000008, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Taillight_LED
+    second: {fileID: 2100000, guid: a1000001000000000000000000000009, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Carbon_Trim
+    second: {fileID: 2100000, guid: a1000001000000000000000000000007, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Chrome
+    second: {fileID: 2100000, guid: a1000001000000000000000000000010, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Mirror_Glass
+    second: {fileID: 2100000, guid: a1000001000000000000000000000011, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_Interior
+    second: {fileID: 2100000, guid: a1000001000000000000000000000012, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mat_License_Plate
+    second: {fileID: 2100000, guid: a1000001000000000000000000000014, type: 2}
+  materials:
+    materialImportMode: 2
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  meshes:
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
