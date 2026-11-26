@@ -61,7 +61,10 @@ public class HighwayTrafficManager : MonoBehaviour
             var child = transform.GetChild(i);
             if (child != null && child.name.StartsWith("TrafficCar"))
             {
-                Destroy(child.gameObject);
+                if (Application.isPlaying)
+                    Destroy(child.gameObject);
+                else
+                    DestroyImmediate(child.gameObject);
             }
         }
     }

@@ -272,6 +272,12 @@ public class HighwayGameBuilder
         uiMgr.overtakeDetector = detector;
         uiMgr.trafficManager = trafficMgr;
         uiMgr.highwayManager = highwayMgr;
+        var carObjRef = GameObject.Find("SportsSedan");
+        if (carObjRef != null)
+        {
+            uiMgr.carController = carObjRef.GetComponent<CarController>();
+            uiMgr.carVisuals = carObjRef.GetComponent<CarVisuals>();
+        }
 
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");

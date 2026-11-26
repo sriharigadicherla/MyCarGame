@@ -1,0 +1,12 @@
+# ninja log v5
+191	17591	8174095394151236	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	bdd004130f31d5d1
+213	17631	8174095394745990	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	2723fdb0411309b7
+28	17789	8174095396041493	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	18d19f62ef83404f
+168	18369	8174095400932600	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	5172cc78ca528488
+17790	20098	8174095418921619	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	cd1db13b8af178e0
+236	20504	8174095422915223	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	377de76cf6dfbe01
+144	21924	8174095437906053	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	c8e053006a1c5c27
+20099	22685	8174095445913193	D:/Invention/MyCarGame/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/4p392k2n/obj/arm64-v8a/libswappywrapper.so	bbbc29e2b155c409
+17631	24483	8174095464489576	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	1bab6539c4e620e6
+17604	24880	8174095468643149	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	1fd5ce25221a993e
+24881	25068	8174095470551759	D:/Invention/MyCarGame/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/4p392k2n/obj/arm64-v8a/libgame.so	94f7bc4ab2ce67f6

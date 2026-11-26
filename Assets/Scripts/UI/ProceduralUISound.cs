@@ -16,7 +16,10 @@ public class ProceduralUISound : MonoBehaviour
             {
                 GameObject go = new GameObject("ProceduralUISound");
                 _instance = go.AddComponent<ProceduralUISound>();
-                DontDestroyOnLoad(go);
+                if (Application.isPlaying)
+                {
+                    DontDestroyOnLoad(go);
+                }
             }
             return _instance;
         }

@@ -229,12 +229,33 @@ public class CarController : MonoBehaviour
         virtualTurnInput = steer;
         virtualHandbrakeInput = handbrake;
         useVirtualInputs = (Mathf.Abs(move) > 0.01f || Mathf.Abs(steer) > 0.01f || handbrake);
+        if (useVirtualInputs)
+        {
+            moveInput = Mathf.Clamp(move, -1f, 1f);
+            turnInput = Mathf.Clamp(steer, -1f, 1f);
+            handbrakeInput = handbrake;
+        }
+    }
+
+    /// <summary>
+    /// Explicit physics simulation step for testing and headless verification
+    /// </summary>
+    public void SimulateFixedUpdate(float dt)
+    {
+        if (rb == null) rb = GetComponent<Rigidbody>();
+        if (!isGameplayActive) return;
+        CalculateSpeeds();
+        ApplySteering();
+        ApplyEngineAndBraking();
+        ApplyLateralTraction();
+        ApplyDownforceAndAntiRoll();
     }
     #endregion
 
     #region Physics Calculations
     private void CalculateSpeeds()
     {
+        if (rb == null) rb = GetComponent<Rigidbody>();
 #if UNITY_6000_0_OR_NEWER
         Vector3 vel = rb.linearVelocity;
 #else

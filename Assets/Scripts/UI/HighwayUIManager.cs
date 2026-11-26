@@ -155,6 +155,7 @@ public class HighwayUIManager : MonoBehaviour
         // Immobilize car and disable driving controls while in Main Menu!
         if (carController != null)
         {
+            carController.isGameplayActive = false;
             carController.enabled = false;
             carController.transform.position = new Vector3(-1.9f, 0.15f, 0f);
             carController.transform.rotation = Quaternion.identity;
@@ -208,6 +209,7 @@ public class HighwayUIManager : MonoBehaviour
             }
             carController.transform.position = new Vector3(-1.9f, 0.15f, 0f);
             carController.transform.rotation = Quaternion.identity;
+            carController.isGameplayActive = true;
             carController.enabled = true;
         }
 
