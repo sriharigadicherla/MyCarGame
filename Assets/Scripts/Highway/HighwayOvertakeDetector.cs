@@ -150,7 +150,8 @@ public class HighwayOvertakeDetector : MonoBehaviour
 
     private void RegisterOvertake(HighwayTrafficCar car, float lateralDist, float playerSpeed)
     {
-        bool isClosePass = (lateralDist <= closePassLateralDist && playerSpeed > car.CurrentSpeedKmh + 15f);
+        bool isOncoming = (car != null && car.isOncoming);
+        bool isClosePass = (lateralDist <= closePassLateralDist);
 
         // Increase combo
         CurrentCombo++;
@@ -159,9 +160,20 @@ public class HighwayOvertakeDetector : MonoBehaviour
         TotalOvertakes++;
         if (isClosePass) TotalClosePasses++;
 
-        // Calculate rewards
-        int cashEarned = isClosePass ? closePassCash : baseOvertakeCash;
-        int scoreEarned = isClosePass ? closePassScore : baseOvertakeScore;
+        // Calculate rewards: Oncoming passes give extra thrill bonuses!
+        int cashEarned;
+        int scoreEarned;
+
+        if (isOncoming)
+        {
+            cashEarned = isClosePass ? (closePassCash + 150) : (baseOvertakeCash + 50);
+            scoreEarned = isClosePass ? (closePassScore + 250) : (baseOvertakeScore + 100);
+        }
+        else
+        {
+            cashEarned = isClosePass ? closePassCash : baseOvertakeCash;
+            scoreEarned = isClosePass ? closePassScore : baseOvertakeScore;
+        }
 
         // Apply combo multiplier
         float multiplier = 1.0f + (CurrentCombo - 1) * 0.25f;
@@ -179,7 +191,16 @@ public class HighwayOvertakeDetector : MonoBehaviour
         }
 
         // Notify UI
-        string eventMsg = isClosePass ? $"⚡ CLOSE OVERTAKE! +${cashEarned} ⚡" : $"OVERTAKE! +${cashEarned}";
+        string eventMsg;
+        if (isOncoming)
+        {
+            eventMsg = isClosePass ? $"⚡ ONCOMING CLOSE PASS! +${cashEarned} ⚡" : $"ONCOMING PASS! +${cashEarned}";
+        }
+        else
+        {
+            eventMsg = isClosePass ? $"⚡ CLOSE OVERTAKE! +${cashEarned} ⚡" : $"OVERTAKE! +${cashEarned}";
+        }
+
         if (CurrentCombo > 1)
         {
             eventMsg += $" (COMBO x{CurrentCombo})";

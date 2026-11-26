@@ -36,7 +36,28 @@ public class HighwayManager : MonoBehaviour
     void Start()
     {
         FindPlayerIfNull();
+        ClearOldChunks();
         BuildInitialChunks();
+    }
+
+    public void ResetHighway()
+    {
+        ClearOldChunks();
+        BuildInitialChunks();
+    }
+
+    private void ClearOldChunks()
+    {
+        activeChunks.Clear();
+        // Destroy existing chunks from previous runs
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            var child = transform.GetChild(i);
+            if (child != null && child.name.StartsWith("HighwayChunk"))
+            {
+                Destroy(child.gameObject);
+            }
+        }
     }
 
     private void FindPlayerIfNull()
@@ -113,24 +134,27 @@ public class HighwayManager : MonoBehaviour
         groundRight.transform.localScale = new Vector3(6f, 1f, chunkLength * 0.1f);
         if (grassMat != null) groundRight.GetComponent<MeshRenderer>().sharedMaterial = grassMat;
 
-        // 2. Main 4-Lane Highway Asphalt Road Slab
+        // 2. Main 4-Lane Highway Asphalt Road Slab (Top flush at Y = 0.0)
         GameObject road = GameObject.CreatePrimitive(PrimitiveType.Cube);
         road.name = "RoadSlab";
         road.transform.SetParent(chunk.transform, false);
-        road.transform.localPosition = new Vector3(0f, 0.01f, midZ);
+        road.transform.localPosition = new Vector3(0f, -0.05f, midZ);
         road.transform.localScale = new Vector3(roadWidth, 0.1f, chunkLength);
         if (asphaltMat != null) road.GetComponent<MeshRenderer>().sharedMaterial = asphaltMat;
 
-        // 3. Yellow Shoulder Lines (Edges)
-        CreateRoadLine(chunk, "ShoulderLine_Left", new Vector3(-7.9f, 0.035f, midZ), new Vector3(0.24f, 0.01f, chunkLength), yellowLineMat);
-        CreateRoadLine(chunk, "ShoulderLine_Right", new Vector3(7.9f, 0.035f, midZ), new Vector3(0.24f, 0.01f, chunkLength), yellowLineMat);
+        // 3. Yellow Shoulder Lines (Edges) - clearly sitting on top of road
+        CreateRoadLine(chunk, "ShoulderLine_Left", new Vector3(-7.9f, 0.015f, midZ), new Vector3(0.26f, 0.015f, chunkLength), yellowLineMat);
+        CreateRoadLine(chunk, "ShoulderLine_Right", new Vector3(7.9f, 0.015f, midZ), new Vector3(0.26f, 0.015f, chunkLength), yellowLineMat);
 
-        // 4. White Dashed Lane Dividers (Separating the 4 lanes)
-        float[] dashX = new float[] { -3.8f, 0f, 3.8f };
-        foreach (float dx in dashX)
-        {
-            CreateDashedLine(chunk, $"LaneLine_{dx}", dx, chunkLength, whiteLineMat);
-        }
+        // 4. Lane Lines & Middle Center Divider (Dotted/Dashed White Lines on top of road)
+        // Left lane divider (between Lane 0 and Lane 1 - Forward lanes)
+        CreateDashedLine(chunk, "LaneLine_Left", -3.8f, chunkLength, whiteLineMat, 3.2f, 4.0f, 0.20f, 0.015f);
+
+        // Middle Center Divider ("madhya lo white dotted/dashed line" separating Forward & Oncoming flows)
+        CreateDashedLine(chunk, "CenterLine_Middle", 0f, chunkLength, whiteLineMat, 3.5f, 2.5f, 0.32f, 0.018f);
+
+        // Right lane divider (between Lane 2 and Lane 3 - Oncoming lanes)
+        CreateDashedLine(chunk, "LaneLine_Right", 3.8f, chunkLength, whiteLineMat, 3.2f, 4.0f, 0.20f, 0.015f);
 
         // 5. Steel Crash Guardrails on Highway Edges
         CreateGuardrail(chunk, "Guardrail_Left", -9.1f, chunkLength);
@@ -183,13 +207,11 @@ public class HighwayManager : MonoBehaviour
         if (mat != null) line.GetComponent<MeshRenderer>().sharedMaterial = mat;
     }
 
-    private void CreateDashedLine(GameObject parent, string name, float x, float length, Material mat)
+    private void CreateDashedLine(GameObject parent, string name, float x, float length, Material mat, float dashLen = 3.5f, float gapLen = 4.0f, float width = 0.20f, float yPos = 0.015f)
     {
         GameObject container = new GameObject(name);
         container.transform.SetParent(parent.transform, false);
 
-        float dashLen = 4.0f;
-        float gapLen = 4.5f;
         float curZ = 0f;
         int idx = 0;
 
@@ -198,8 +220,8 @@ public class HighwayManager : MonoBehaviour
             GameObject dash = GameObject.CreatePrimitive(PrimitiveType.Cube);
             dash.name = $"Dash_{idx++}";
             dash.transform.SetParent(container.transform, false);
-            dash.transform.localPosition = new Vector3(x, 0.035f, curZ + dashLen * 0.5f);
-            dash.transform.localScale = new Vector3(0.20f, 0.01f, dashLen);
+            dash.transform.localPosition = new Vector3(x, yPos, curZ + dashLen * 0.5f);
+            dash.transform.localScale = new Vector3(width, 0.015f, dashLen);
             DestroyImmediate(dash.GetComponent<BoxCollider>());
             if (mat != null) dash.GetComponent<MeshRenderer>().sharedMaterial = mat;
 

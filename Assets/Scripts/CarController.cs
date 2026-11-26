@@ -58,6 +58,9 @@ public class CarController : MonoBehaviour
     public float maxRpm = 7200f;
     public int totalGears = 6;
 
+    [Header("Gameplay State")]
+    public bool isGameplayActive = false;
+
     // Public properties for UI and Audio
     public float CurrentSpeedKmh { get; private set; }
     public float ForwardVelocity { get; private set; }
@@ -119,6 +122,26 @@ public class CarController : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (!isGameplayActive)
+        {
+            // Keep car stationary at rest while in Main Menu
+            if (rb != null)
+            {
+                #if UNITY_6000_0_OR_NEWER
+                Vector3 v = rb.linearVelocity;
+                v.x = 0f;
+                v.z = 0f;
+                rb.linearVelocity = v;
+                #else
+                Vector3 v = rb.velocity;
+                v.x = 0f;
+                v.z = 0f;
+                rb.velocity = v;
+                #endif
+            }
+            return;
+        }
+
         CalculateSpeeds();
         ApplySteering();
         ApplyEngineAndBraking();
@@ -126,10 +149,38 @@ public class CarController : MonoBehaviour
         ApplyDownforceAndAntiRoll();
     }
 
+    public void ResetToStart()
+    {
+        transform.position = new Vector3(-1.9f, 0.15f, 0f);
+        transform.rotation = Quaternion.identity;
+        if (rb == null) rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            #if UNITY_6000_0_OR_NEWER
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            #else
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            #endif
+        }
+        CurrentSpeedKmh = 0f;
+        CurrentRpm = idleRpm;
+        CurrentGear = 1;
+        CurrentGearName = "N";
+        isGameplayActive = false;
+    }
+
     #region Input Processing
     private void ReadInputs()
     {
-        // 1. Check Keyboard Inputs
+        if (!isGameplayActive)
+        {
+            moveInput = 0f;
+            turnInput = 0f;
+            handbrakeInput = true;
+            return;
+        }
         float rawMove = 0f;
         float rawTurn = 0f;
         bool rawHandbrake = false;
