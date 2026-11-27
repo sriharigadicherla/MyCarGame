@@ -186,23 +186,35 @@ public class CarController : MonoBehaviour
         bool rawHandbrake = false;
 
 #if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null)
+        try
         {
-            var kb = Keyboard.current;
-            if (kb.wKey.isPressed || kb.upArrowKey.isPressed) rawMove += 1f;
-            if (kb.sKey.isPressed || kb.downArrowKey.isPressed) rawMove -= 1f;
-            if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) rawTurn += 1f;
-            if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) rawTurn -= 1f;
-            if (kb.spaceKey.isPressed) rawHandbrake = true;
+            if (Keyboard.current != null)
+            {
+                var kb = Keyboard.current;
+                if (kb.wKey.isPressed || kb.upArrowKey.isPressed) rawMove += 1f;
+                if (kb.sKey.isPressed || kb.downArrowKey.isPressed) rawMove -= 1f;
+                if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) rawTurn += 1f;
+                if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) rawTurn -= 1f;
+                if (kb.spaceKey.isPressed) rawHandbrake = true;
+            }
         }
+        catch { }
 #endif
         if (Mathf.Approximately(rawMove, 0f) && Mathf.Approximately(rawTurn, 0f))
         {
             try
             {
-                rawMove = Input.GetAxisRaw("Vertical");
-                rawTurn = Input.GetAxisRaw("Horizontal");
+                if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) rawMove += 1f;
+                if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) rawMove -= 1f;
+                if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) rawTurn += 1f;
+                if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) rawTurn -= 1f;
                 if (Input.GetKey(KeyCode.Space)) rawHandbrake = true;
+
+                if (Mathf.Approximately(rawMove, 0f) && Mathf.Approximately(rawTurn, 0f))
+                {
+                    rawMove = Input.GetAxisRaw("Vertical");
+                    rawTurn = Input.GetAxisRaw("Horizontal");
+                }
             }
             catch { }
         }

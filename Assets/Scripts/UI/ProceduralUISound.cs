@@ -30,6 +30,10 @@ public class ProceduralUISound : MonoBehaviour
     private AudioClip hoverClip;
     private AudioClip modalClip;
     private AudioClip startRaceClip;
+    private AudioClip countdownLowClip;
+    private AudioClip countdownMidClip;
+    private AudioClip countdownHighClip;
+    private AudioClip countdownGoClip;
 
     void Awake()
     {
@@ -54,6 +58,36 @@ public class ProceduralUISound : MonoBehaviour
         hoverClip = CreateSoftTickClip();
         modalClip = CreateModalChimeClip();
         startRaceClip = CreateStartRaceClip();
+        countdownLowClip = CreateToneClip(440f, 0.16f);
+        countdownMidClip = CreateToneClip(554.37f, 0.16f);
+        countdownHighClip = CreateToneClip(659.25f, 0.16f);
+        countdownGoClip = CreateGoChimeClip(880f, 0.45f);
+    }
+
+    public void PlayCountdownBeep(int count)
+    {
+        if (audioSource == null) return;
+        AudioClip clip = count switch
+        {
+            3 => countdownLowClip,
+            2 => countdownMidClip,
+            1 => countdownHighClip,
+            _ => countdownMidClip
+        };
+        if (clip != null)
+        {
+            audioSource.pitch = 1.0f;
+            audioSource.PlayOneShot(clip, 0.85f);
+        }
+    }
+
+    public void PlayCountdownGo()
+    {
+        if (audioSource != null && countdownGoClip != null)
+        {
+            audioSource.pitch = 1.0f;
+            audioSource.PlayOneShot(countdownGoClip, 1.0f);
+        }
     }
 
     public void PlayClick()
@@ -184,6 +218,56 @@ public class ProceduralUISound : MonoBehaviour
         }
 
         AudioClip clip = AudioClip.Create("UI_StartRace", numSamples, 1, sampleRate, false);
+        clip.SetData(samples, 0);
+        return clip;
+    }
+
+    // 5. Crisp countdown tone beep (0.16s)
+    private AudioClip CreateToneClip(float freq, float duration)
+    {
+        int sampleRate = 44100;
+        int numSamples = (int)(sampleRate * duration);
+        float[] samples = new float[numSamples];
+
+        for (int i = 0; i < numSamples; i++)
+        {
+            float t = (float)i / sampleRate;
+            float progress = t / duration;
+            float attack = Mathf.Clamp01(t / 0.005f);
+            float decay = Mathf.Exp(-progress * 4.2f);
+            float env = attack * decay;
+            float wave = Mathf.Sin(2f * Mathf.PI * freq * t) * 0.85f +
+                         Mathf.Sin(2f * Mathf.PI * freq * 2f * t) * 0.15f;
+            samples[i] = Mathf.Clamp(wave * env, -1f, 1f);
+        }
+
+        AudioClip clip = AudioClip.Create($"UI_Beep_{freq}", numSamples, 1, sampleRate, false);
+        clip.SetData(samples, 0);
+        return clip;
+    }
+
+    // 6. Celebratory countdown GO triumphant major chord (0.45s)
+    private AudioClip CreateGoChimeClip(float baseFreq, float duration)
+    {
+        int sampleRate = 44100;
+        int numSamples = (int)(sampleRate * duration);
+        float[] samples = new float[numSamples];
+
+        for (int i = 0; i < numSamples; i++)
+        {
+            float t = (float)i / sampleRate;
+            float progress = t / duration;
+            float attack = Mathf.Clamp01(t / 0.008f);
+            float decay = Mathf.Exp(-progress * 2.8f);
+            float env = attack * decay;
+            float chord = Mathf.Sin(2f * Mathf.PI * baseFreq * t) * 0.45f +
+                          Mathf.Sin(2f * Mathf.PI * baseFreq * 1.2599f * t) * 0.25f +
+                          Mathf.Sin(2f * Mathf.PI * baseFreq * 1.4983f * t) * 0.20f +
+                          Mathf.Sin(2f * Mathf.PI * baseFreq * 2f * t) * 0.10f;
+            samples[i] = Mathf.Clamp(chord * env, -1f, 1f);
+        }
+
+        AudioClip clip = AudioClip.Create("UI_Go_Chime", numSamples, 1, sampleRate, false);
         clip.SetData(samples, 0);
         return clip;
     }

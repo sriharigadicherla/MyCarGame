@@ -47,14 +47,19 @@ public class CarDrivingVerification
         if (!menuCarFrozen) Debug.LogError("<color=red>[FAIL]</color> Car is not frozen while in Main Menu!");
         if (!trafficFrozen) Debug.LogError("<color=red>[FAIL]</color> Traffic is not frozen while in Main Menu!");
 
-        // Test 2: Start Highway Game
+        // Test 2: Start Highway Game with Countdown Sequence
         uiMgr.StartHighwayGame();
-        Debug.Log($"[DEBUG] uiMgr.carController={(uiMgr.carController != null ? uiMgr.carController.name : "NULL")}, cc={cc.name}, IsGameplayRunning={uiMgr.IsGameplayRunning}, isGameplayActive={cc.isGameplayActive}, isKinematic={rb.isKinematic}");
+        bool countdownActive = (uiMgr.countdownPanel != null && uiMgr.countdownPanel.activeSelf);
+        bool carLockedDuringCountdown = (cc.isGameplayActive == false);
+        Debug.Log($"[Test 2A] Countdown Started: CountdownActive={countdownActive}, CarLocked={carLockedDuringCountdown}");
+
+        // Activate gameplay (as happens after 3.. 2.. 1.. GO!)
+        uiMgr.ActivateGameplay();
         bool gameplayActive = (uiMgr.IsGameplayRunning == true) && (cc.isGameplayActive == true) && (rb.isKinematic == false);
         bool hudVisible = (uiMgr.gameplayHUDPanel != null && uiMgr.gameplayHUDPanel.activeSelf) && (uiMgr.mainMenuPanel != null && !uiMgr.mainMenuPanel.activeSelf);
         bool trafficActive = (uiMgr.trafficManager != null && uiMgr.trafficManager.isTrafficActive);
 
-        Debug.Log($"[Test 2] Game Running State: GameplayActive={gameplayActive}, HUDVisible={hudVisible}, TrafficActive={trafficActive}");
+        Debug.Log($"[Test 2B] Game Running State: GameplayActive={gameplayActive}, HUDVisible={hudVisible}, TrafficActive={trafficActive}");
 
         if (!gameplayActive) Debug.LogError("<color=red>[FAIL]</color> Gameplay did not activate on car!");
         if (!hudVisible) Debug.LogError("<color=red>[FAIL]</color> HUD is not visible or Menu not hidden!");

@@ -36,6 +36,11 @@ public class GameBuildExporter
         {
             float sizeMb = report.summary.totalSize / (1024f * 1024f);
             Debug.Log($"<color=green>[GameBuildExporter]</color> SUCCESS! Windows game built at: {exePath} (Size: {sizeMb:F1} MB)");
+
+            string zipPath = "Builds/MyCarGame_Windows.zip";
+            if (File.Exists(zipPath)) File.Delete(zipPath);
+            System.IO.Compression.ZipFile.CreateFromDirectory(buildDir, zipPath);
+            Debug.Log($"<color=green>[GameBuildExporter]</color> SUCCESS! Windows Zip archive created at: {zipPath}");
         }
         else
         {
